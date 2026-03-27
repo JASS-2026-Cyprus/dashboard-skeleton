@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { subscribeReports, type Report } from './maintenance/firebase';
+import { useState, useCallback } from 'react';
+import { useMaintenanceReports } from '../hooks/useMaintenanceReports';
 import AnalysisTab from './maintenance/AnalysisTab';
 import ReportsTab from './maintenance/ReportsTab';
 import DashboardTab from './maintenance/DashboardTab';
@@ -10,12 +10,7 @@ type Tab = 'analysis' | 'reports' | 'dashboard';
 
 export default function MaintenancePage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [reports, setReports] = useState<Report[]>([]);
-
-  useEffect(() => {
-    const unsub = subscribeReports(setReports);
-    return unsub;
-  }, []);
+  const { reports } = useMaintenanceReports();
 
   const handleStartAnalysisFromReport = useCallback((_file: File, _reportId: string) => {
     // Switch to analysis tab — the AnalysisTab manages its own state

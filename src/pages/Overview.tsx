@@ -6,7 +6,9 @@ import { POOLS, POOL_TO_SENSOR_ID } from '../lib/waterConfig';
 import type { Pool } from '../lib/waterConfig';
 import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
+import { useMaintenanceReports } from '../hooks/useMaintenanceReports';
 import { fetchEqEvents, type EqEvent } from '../lib/supabase';
+import MaintenanceOverviewContent from './maintenance/MaintenanceOverviewContent';
 
 const pm25Data = [9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2, 21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4, 24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3];
 
@@ -164,6 +166,7 @@ export default function Overview() {
   const [selectedPool, setSelectedPool] = useState<Pool>('Main Pool');
   const { latestDelta, latestSea } = useWaterData(selectedPool);
   const { alertFeed } = useAgentAlerts();
+  const { reports } = useMaintenanceReports();
   const [eqEvents, setEqEvents] = useState<EqEvent[]>([]);
 
   useEffect(() => {
@@ -184,6 +187,7 @@ export default function Overview() {
     waterSuccess = false;
   }
 
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <SystemSummary
@@ -194,14 +198,14 @@ export default function Overview() {
       <div className="grid" style={{ flex: 1, minHeight: 0 }}>
         <TeamWidget
           title="Maintenance"
-          status="On track"
+          status="Monitoring"
           statusColor="blue"
-          description="Design skeleton provider. LLM chat summary integration."
-          stats={[
-            { label: 'Status', value: 'On track', success: true },
-            { label: 'Due', value: 'Before lunch' },
-          ]}
-        />
+          description="City infrastructure maintenance overview"
+          detailsLink="/maintenance"
+          stats={[]}
+        >
+          <MaintenanceOverviewContent reports={reports} />
+        </TeamWidget>
         <TeamWidget
           title="Air Quality"
           status="Good"
