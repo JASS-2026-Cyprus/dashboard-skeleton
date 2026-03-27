@@ -1,6 +1,13 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import type { TeamWidgetProps } from '../types';
 import styles from './TeamWidget.module.css';
+
+const SIZE_STYLE: Record<string, React.CSSProperties> = {
+  wide:  { gridColumn: 'span 2' },
+  tall:  { gridRow: 'span 2' },
+  large: { gridColumn: 'span 2', gridRow: 'span 2' },
+};
 
 export default function TeamWidget({
   title,
@@ -9,9 +16,11 @@ export default function TeamWidget({
   stats,
   graph,
   detailsLink,
-}: TeamWidgetProps) {
+  size,
+  children,
+}: TeamWidgetProps & { children?: React.ReactNode }) {
   return (
-    <div className={styles.widget}>
+    <div className={styles.widget} style={size ? SIZE_STYLE[size] : undefined}>
       <div className={styles.header}>
         <div className={styles.titleGroup}>
           <div
@@ -37,6 +46,7 @@ export default function TeamWidget({
           </div>
         ))}
       </div>
+      {children && <div className={styles.extra}>{children}</div>}
     </div>
   );
 }

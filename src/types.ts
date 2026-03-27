@@ -14,6 +14,7 @@ export interface TeamWidgetProps {
   stats: StatItem[];
   graph?: ReactNode;
   detailsLink?: string;
+  size?: 'wide' | 'tall' | 'large';
 }
 
 export interface SystemSummaryProps {
