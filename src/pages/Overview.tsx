@@ -7,8 +7,7 @@ import type { Pool } from '../lib/waterConfig';
 import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
 import { fetchEqEvents, type EqEvent } from '../lib/supabase';
-
-const pm25Data = [9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2, 21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4, 24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3];
+import { useAirQualityData } from '../hooks/useAirQualityData';
 
 function WaterOverviewContent({ selectedPool, onPoolChange }: {
   selectedPool: Pool;
@@ -164,6 +163,7 @@ export default function Overview() {
   const [selectedPool, setSelectedPool] = useState<Pool>('Main Pool');
   const { latestDelta, latestSea } = useWaterData(selectedPool);
   const { alertFeed } = useAgentAlerts();
+  const { latest: aqLatest, history: aqHistory } = useAirQualityData();
   const [eqEvents, setEqEvents] = useState<EqEvent[]>([]);
 
   useEffect(() => {
@@ -206,9 +206,9 @@ export default function Overview() {
           title="Air Quality"
           status="Good"
           statusColor="green"
-          description="5 pollutants monitored. PM2.5, NO₂, CO and more."
+          description="Temperature, humidity, pressure, gas resistance and altitude monitored."
           detailsLink="/air-quality"
-          graph={<LineGraph data={pm25Data} label="PM2.5 (24h)" currentValue="10.3 µg/m³" color="#378add" />}
+          graph={<LineGraph data={aqHistory.humidity} label="Humidity (24h)" currentValue={aqLatest ? `${aqLatest.humidity.toFixed(1)} %` : '—'} color="#378add" />}
           stats={[
             { label: 'Status', value: 'Good', success: true },
             { label: 'Active events', value: '2' },

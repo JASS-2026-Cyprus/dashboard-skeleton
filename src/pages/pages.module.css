@@ -1,3 +1,40 @@
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  padding: 0.3rem 0.85rem;
+  border-radius: 6px;
+  border: 0.5px solid var(--color-border);
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.tabActive {
+  font-weight: 500;
+  border-color: transparent;
+}
+
+.tabActiveGreen  { background: #f1f8e9; color: #33691e; }
+.tabActiveBlue   { background: #e3f2fd; color: #1565c0; }
+.tabActiveGray   { background: #e8eaf6; color: #283593; }
+
+.eventBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.badgeActive   { background: #f1f8e9; color: #33691e; }
+.badgeUpcoming { background: #e3f2fd; color: #1565c0; }
+.badgePast     { background: #e8eaf6; color: #283593; }
+
 .pageHeader {
   font-size: 22px;
   font-weight: 500;
