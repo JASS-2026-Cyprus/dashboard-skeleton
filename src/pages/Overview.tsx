@@ -1,16 +1,84 @@
+import { useState } from 'react';
 import SystemSummary from '../components/SystemSummary';
 import TeamWidget from '../components/TeamWidget';
-import LineGraph from '../components/LineGraph';
 import BarGraph from '../components/BarGraph';
+import LineGraph from '../components/LineGraph';
+import { POOLS, POOL_TO_SENSOR_ID } from '../lib/waterConfig';
+import type { Pool } from '../lib/waterConfig';
+import { useWaterData } from '../hooks/useWaterData';
+import { useAgentAlerts } from '../hooks/useAgentAlerts';
 
-const phData = [6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.3, 7.2, 7.1, 7.0, 6.9, 6.8];
 const seismicData = [0.1, 0.2, 0.08, 0.3, 0.1, 0.15, 0.08, 0.25, 0.12];
 
+function WaterOverviewContent({ selectedPool, onPoolChange }: {
+  selectedPool: Pool;
+  onPoolChange: (p: Pool) => void;
+}) {
+  const { latestDelta, latestSea, deltaData, seaData } = useWaterData(selectedPool);
+  const sparkDelta = deltaData.map((r) => r.value);
+  const sparkSea = seaData.map((r) => r.value);
+
+  return (
+    <>
+      <select
+        value={selectedPool}
+        onChange={(e) => onPoolChange(e.target.value as Pool)}
+        style={{
+          fontSize: 12,
+          padding: '3px 6px',
+          border: '1px solid #e0e0e0',
+          borderRadius: 6,
+          background: 'white',
+          color: '#1a1a1a',
+          cursor: 'pointer',
+          marginBottom: 8,
+          width: '100%',
+        }}
+      >
+        {POOLS.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
+      {sparkDelta.length > 1 && (
+        <LineGraph
+          data={sparkDelta}
+          label="Δ Light Intensity (inside vs outside)"
+          currentValue={latestDelta != null ? `Δ ${latestDelta.toFixed(1)}` : '—'}
+          color="var(--color-blue)"
+        />
+      )}
+      {sparkSea.length > 1 && (
+        <LineGraph
+          data={sparkSea}
+          label="Sea Temperature (Paphos Coast)"
+          currentValue={latestSea != null ? `${latestSea.toFixed(1)} °C` : '—'}
+          color="var(--color-green)"
+        />
+      )}
+    </>
+  );
+}
+
 export default function Overview() {
+  const [selectedPool, setSelectedPool] = useState<Pool>('Main Pool');
+  const { latestDelta, latestSea } = useWaterData(selectedPool);
+  const { alertFeed } = useAgentAlerts();
+
+  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
+  const topAlert = alertFeed.find((e) => e.sensor_id === sensorId);
+
+  let waterStatus = 'Normal';
+  let waterSuccess = true;
+  if (topAlert) {
+    const isCrit = topAlert.action === 'close_facility' || topAlert.severity === 'critical';
+    waterStatus = isCrit ? 'Critical' : topAlert.action === 'send_maintenance' ? 'Maintenance' : 'Warning';
+    waterSuccess = false;
+  }
+
   return (
     <>
       <SystemSummary
-        action="Schedule water quality briefing. Elevated pH trending upward."
+        action="Monitor pool clarity delta. Water agent is active."
         urgency="Routine monitoring. No immediate service disruptions forecasted."
         state="4 teams active. All sensors operational."
       />
@@ -37,14 +105,20 @@ export default function Overview() {
         />
         <TeamWidget
           title="Water"
-          status="Normal"
+          status={waterStatus}
           statusColor="blue"
-          description="12 quality sensors. pH and turbidity tracking."
+          description={`Live pool clarity monitoring. Delta analysis across inside/outside sensors.`}
           detailsLink="/water"
-          graph={<LineGraph data={phData} label="pH levels (24h)" currentValue="7.2" />}
+          graph={
+            <WaterOverviewContent
+              selectedPool={selectedPool}
+              onPoolChange={setSelectedPool}
+            />
+          }
           stats={[
-            { label: 'Status', value: 'Normal', success: true },
-            { label: 'Sensors', value: '12 / 12' },
+            { label: 'Status', value: waterStatus, success: waterSuccess },
+            { label: 'Δ Clarity', value: latestDelta != null ? `Δ ${latestDelta.toFixed(1)}` : '—' },
+            { label: 'Sea Temp', value: latestSea != null ? `${latestSea.toFixed(1)} °C` : '—' },
           ]}
         />
         <TeamWidget
