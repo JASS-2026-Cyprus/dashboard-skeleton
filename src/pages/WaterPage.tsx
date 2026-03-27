@@ -1,69 +1,356 @@
-import LineGraph from '../components/LineGraph';
-import styles from './pages.module.css';
+import { useState } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
-const sensors = [
-  { name: 'Station North', ph: '7.1', turbidity: '2.3 NTU' },
-  { name: 'Station South', ph: '7.3', turbidity: '1.8 NTU' },
-  { name: 'Reservoir A', ph: '7.0', turbidity: '2.1 NTU' },
-  { name: 'Reservoir B', ph: '7.4', turbidity: '1.5 NTU' },
-  { name: 'Plant Intake', ph: '6.9', turbidity: '3.2 NTU' },
-  { name: 'Plant Output', ph: '7.2', turbidity: '0.8 NTU' },
-  { name: 'Distribution W', ph: '7.1', turbidity: '1.1 NTU' },
-  { name: 'Distribution E', ph: '7.3', turbidity: '1.4 NTU' },
-  { name: 'Tower Central', ph: '7.2', turbidity: '1.6 NTU' },
-  { name: 'Tower Hill', ph: '7.0', turbidity: '2.0 NTU' },
-  { name: 'Pump Stn 1', ph: '7.1', turbidity: '1.9 NTU' },
-  { name: 'Pump Stn 2', ph: '7.2', turbidity: '1.7 NTU' },
-];
+import { POOLS, POOL_TO_SENSOR_ID, SENSOR_ID_TO_NAME } from '../lib/waterConfig';
+import type { Pool, AlertEntry } from '../lib/waterConfig';
+import { useWaterData } from '../hooks/useWaterData';
+import { useAgentAlerts } from '../hooks/useAgentAlerts';
+import type { Reading } from '../hooks/useWaterData';
+import styles from './WaterPage.module.css';
 
-const phHistory = [7.0, 7.1, 7.0, 7.2, 7.3, 7.4, 7.3, 7.2, 7.1, 7.2, 7.3, 7.2, 7.1, 7.0, 7.1, 7.2];
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-export default function WaterPage() {
+// ── helpers ───────────────────────────────────────────────────────────────────
+function fmtHHMM(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function chartCommonOpts(yLabel?: string) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 } as const,
+    plugins: { legend: { display: true }, tooltip: { enabled: true } },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxTicksLimit: 8, color: '#aaa' }, grid: { color: '#f0f0f0' } },
+      y: {
+        ticks: { font: { size: 10 }, color: '#aaa' },
+        grid: { color: '#f0f0f0' },
+        ...(yLabel ? { title: { display: true, text: yLabel, font: { size: 10 }, color: '#888' } } : {}),
+      },
+    },
+  };
+}
+
+// ── sub-components ────────────────────────────────────────────────────────────
+function PoolChart({ poolOut, poolIn }: { poolOut: Reading[]; poolIn: Reading[] }) {
+  const src = poolOut.length >= poolIn.length ? poolOut : poolIn;
+  const labels = src.map((r) => fmtHHMM(r.timestamp));
   return (
-    <>
-      <h1 className={styles.pageHeader}>Water Quality</h1>
+    <div style={{ height: 220 }}>
+      <Line
+        data={{
+          labels,
+          datasets: [
+            {
+              label: 'Outside',
+              data: poolOut.map((r) => r.value),
+              borderColor: '#378add',
+              backgroundColor: 'rgba(55,138,221,0.08)',
+              borderWidth: 2,
+              pointRadius: 2,
+              fill: true,
+              tension: 0.35,
+            },
+            {
+              label: 'Inside',
+              data: poolIn.map((r) => r.value),
+              borderColor: '#22c55e',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointRadius: 2,
+              fill: false,
+              tension: 0.35,
+            },
+          ],
+        }}
+        options={chartCommonOpts('Light Intensity')}
+      />
+    </div>
+  );
+}
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>pH Trend (48h)</h2>
-        <LineGraph data={phHistory} label="Average pH" currentValue="7.2" />
+function SeaChart({ seaData }: { seaData: Reading[] }) {
+  return (
+    <div style={{ height: 180 }}>
+      <Line
+        data={{
+          labels: seaData.map((r) => fmtHHMM(r.timestamp)),
+          datasets: [
+            {
+              label: 'Sea Temperature (°C)',
+              data: seaData.map((r) => r.value),
+              borderColor: '#f97316',
+              backgroundColor: 'rgba(249,115,22,0.08)',
+              borderWidth: 2,
+              pointRadius: 2,
+              fill: true,
+              tension: 0.35,
+            },
+          ],
+        }}
+        options={chartCommonOpts('°C')}
+      />
+    </div>
+  );
+}
+
+function DeltaChart({ deltaData }: { deltaData: Reading[] }) {
+  return (
+    <div style={{ height: 180 }}>
+      <Line
+        data={{
+          labels: deltaData.map((r) => fmtHHMM(r.timestamp)),
+          datasets: [
+            {
+              label: 'Δ |Outside − Inside|',
+              data: deltaData.map((r) => r.value),
+              borderColor: '#a855f7',
+              backgroundColor: 'rgba(168,85,247,0.08)',
+              borderWidth: 2,
+              pointRadius: 2,
+              fill: true,
+              tension: 0.35,
+            },
+          ],
+        }}
+        options={chartCommonOpts('Δ Light Intensity')}
+      />
+    </div>
+  );
+}
+
+function RiskBanner({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
+  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
+  const top = entries.find((e) => e.sensor_id === sensorId);
+
+  if (!top) {
+    return (
+      <div className={`${styles.banner} ${styles.bannerClear}`}>
+        <span>✅</span>
+        <div>
+          <strong>ALL CLEAR</strong>
+          <span className={styles.bannerDetail}>No alerts from agent for {selectedPool}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isCritical = top.action === 'close_facility' || top.severity === 'critical';
+  const isMaintenance = top.action === 'send_maintenance';
+  return (
+    <div className={`${styles.banner} ${isCritical ? styles.bannerDanger : styles.bannerWarn}`}>
+      <span>{isCritical ? '🚨' : isMaintenance ? '🔧' : '⚠️'}</span>
+      <div>
+        <strong>{isCritical ? 'CRITICAL' : isMaintenance ? 'MAINTENANCE' : 'WARNING'}</strong>
+        <span className={styles.bannerDetail}>{top.message}</span>
+      </div>
+    </div>
+  );
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  post_alert: 'alert',
+  send_maintenance: 'maintenance',
+  close_facility: 'closed',
+};
+
+function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
+  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
+  const poolEntries = entries.filter((e) => e.sensor_id === sensorId);
+  const otherEntries = entries.filter((e) => e.sensor_id !== sensorId);
+  const display = [...poolEntries, ...otherEntries].slice(0, 15);
+
+  if (!display.length) {
+    return <p className={styles.feedEmpty}>No alerts for {selectedPool} — agent is monitoring</p>;
+  }
+
+  return (
+    <div className={styles.feedList}>
+      {display.map((e, i) => {
+        const isCritical = e.action === 'close_facility' || e.severity === 'critical';
+        const badgeClass = isCritical
+          ? styles.badgeCritical
+          : e.action === 'send_maintenance'
+          ? styles.badgeMaintenance
+          : e.isInit
+          ? styles.badgeInit
+          : styles.badgeWarning;
+        const badgeText = isCritical ? 'critical' : (ACTION_LABEL[e.action] ?? e.action);
+        const isOtherPool = e.sensor_id !== sensorId;
+        return (
+          <div key={i} className={styles.feedEntry}>
+            <span className={`${styles.badge} ${badgeClass}`}>{badgeText}</span>
+            <span className={styles.feedContent}>
+              {e.time && e.time !== '—' && (
+                <span className={styles.feedTime}>{e.time} </span>
+              )}
+              {e.message}
+              {isOtherPool && (
+                <span className={styles.feedPool}> [{SENSOR_ID_TO_NAME[e.sensor_id] ?? e.sensor_id}]</span>
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── main page ─────────────────────────────────────────────────────────────────
+export default function WaterPage() {
+  const [selectedPool, setSelectedPool] = useState<Pool>('Main Pool');
+  const [view, setView] = useState<'pools' | 'map'>('pools');
+
+  const {
+    poolOut, poolIn, seaData, deltaData,
+    latestOut, latestIn, latestSea, latestDelta,
+    loading, error, refresh, lastRefresh,
+  } = useWaterData(selectedPool);
+
+  const { alertFeed, wsConnected, bbConnected } = useAgentAlerts();
+
+  return (
+    <div className={styles.page}>
+      {/* Top bar */}
+      <div className={styles.topBar}>
+        <h1 className={styles.pageHeader}>Water Quality</h1>
+        <div className={styles.viewToggle}>
+          <button
+            className={`${styles.viewBtn} ${view === 'pools' ? styles.viewBtnActive : ''}`}
+            onClick={() => setView('pools')}
+          >
+            Pools
+          </button>
+          <button
+            className={`${styles.viewBtn} ${view === 'map' ? styles.viewBtnActive : ''}`}
+            onClick={() => setView('map')}
+          >
+            Map
+          </button>
+        </div>
       </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Sensor Grid</h2>
-        <div className={styles.statusIndicator}>
-          <span className={styles.statusDot} />
-          12 / 12 online
+      {/* Map view */}
+      {view === 'map' && (
+        <div className={styles.mapPlaceholder}>
+          <span>🗺️</span>
+          <p>Map view coming soon</p>
         </div>
-        <div className={styles.sensorGrid}>
-          {sensors.map((s) => (
-            <div key={s.name} className={styles.sensorCard}>
-              <div className={styles.sensorName}>{s.name}</div>
-              <div className={styles.sensorValue}>pH {s.ph}</div>
-              <div className={styles.sensorName}>{s.turbidity}</div>
+      )}
+
+      {/* Pools view */}
+      {view === 'pools' && (
+        <>
+          {/* Pool selector */}
+          <div className={styles.poolSelector}>
+            {POOLS.map((pool) => (
+              <button
+                key={pool}
+                className={`${styles.poolBtn} ${selectedPool === pool ? styles.poolBtnActive : ''}`}
+                onClick={() => setSelectedPool(pool)}
+              >
+                {pool}
+              </button>
+            ))}
+          </div>
+
+          {/* Refresh bar */}
+          <div className={styles.refreshBar}>
+            <span className={styles.refreshTime}>
+              {loading
+                ? 'Refreshing…'
+                : lastRefresh
+                ? `Updated ${lastRefresh.toLocaleTimeString()}`
+                : 'Never refreshed'}
+            </span>
+            <div className={styles.statusDots}>
+              <span className={styles.dot} style={{ background: wsConnected ? '#22c55e' : '#aaa' }} />
+              <span style={{ color: wsConnected ? 'var(--color-green-text)' : '#aaa', fontSize: 11 }}>
+                swarm {wsConnected ? 'live' : 'offline'}
+              </span>
+              <span className={styles.dot} style={{ background: bbConnected ? '#22c55e' : '#aaa' }} />
+              <span style={{ color: bbConnected ? 'var(--color-green-text)' : '#aaa', fontSize: 11 }}>
+                blackboard {bbConnected ? 'live' : 'offline'}
+              </span>
             </div>
-          ))}
-        </div>
-      </div>
+            <button className={styles.refreshBtn} onClick={refresh}>↻ Refresh</button>
+          </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Quality Dashboard</h2>
-        <div className={styles.configRow}>
-          <span className={styles.configLabel}>Average pH</span>
-          <span className={styles.configValue}>7.15</span>
-        </div>
-        <div className={styles.configRow}>
-          <span className={styles.configLabel}>Average turbidity</span>
-          <span className={styles.configValue}>1.78 NTU</span>
-        </div>
-        <div className={styles.configRow}>
-          <span className={styles.configLabel}>Chlorine residual</span>
-          <span className={styles.configValue}>0.5 mg/L</span>
-        </div>
-        <div className={styles.configRow}>
-          <span className={styles.configLabel}>Temperature</span>
-          <span className={styles.configValue}>14.2 °C</span>
-        </div>
-      </div>
-    </>
+          {error && <div className={styles.errorBanner}>⚠ {error}</div>}
+
+          {/* Risk banner */}
+          <RiskBanner entries={alertFeed} selectedPool={selectedPool} />
+
+          {/* Sensor cards */}
+          <div className={styles.cardGrid}>
+            <div className={styles.sensorCard}>
+              <div className={styles.cardLabel}>Outside · light intensity</div>
+              <div className={styles.cardValue}>
+                {latestOut != null ? latestOut.toFixed(1) : '—'}
+                <span className={styles.cardUnit}> %</span>
+              </div>
+            </div>
+            <div className={styles.sensorCard}>
+              <div className={styles.cardLabel}>Inside · light intensity</div>
+              <div className={styles.cardValue}>
+                {latestIn != null ? latestIn.toFixed(1) : '—'}
+                <span className={styles.cardUnit}> %</span>
+              </div>
+            </div>
+            <div className={styles.sensorCard}>
+              <div className={styles.cardLabel}>Sea Temperature</div>
+              <div className={styles.cardValue}>
+                {latestSea != null ? latestSea.toFixed(1) : '—'}
+                <span className={styles.cardUnit}> °C</span>
+              </div>
+            </div>
+            <div className={styles.sensorCard}>
+              <div className={styles.cardLabel}>Inside / Outside gap (Δ)</div>
+              <div className={styles.cardValue}>
+                {latestDelta != null ? latestDelta.toFixed(1) : '—'}
+                <span className={styles.cardUnit}> Δ</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Charts */}
+          <div className={styles.chartSection}>
+            <div className={styles.chartCard}>
+              <div className={styles.chartTitle}>{selectedPool} — Light Intensity</div>
+              <div className={styles.chartSubtitle}>Inside & Outside overlaid · last 50 readings</div>
+              <PoolChart poolOut={poolOut} poolIn={poolIn} />
+            </div>
+            <div className={styles.chartCard}>
+              <div className={styles.chartTitle}>Paphos Coast — Sea Temperature</div>
+              <div className={styles.chartSubtitle}>Last 50 readings · °C</div>
+              <SeaChart seaData={seaData} />
+            </div>
+          </div>
+
+          <div className={styles.chartCardWide}>
+            <div className={styles.chartTitle}>{selectedPool} — Inside / Outside Discrepancy (Δ)</div>
+            <div className={styles.chartSubtitle}>|Outside − Inside| over time · delta-first analysis</div>
+            <DeltaChart deltaData={deltaData} />
+          </div>
+
+          {/* Agent analysis feed */}
+          <div className={styles.feedCard}>
+            <div className={styles.feedHeader}>Agent Analysis</div>
+            <AgentFeed entries={alertFeed} selectedPool={selectedPool} />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
