@@ -47,6 +47,7 @@ export interface AgentEvent {
   details: string;
   created_at: string;
   updated_at: string;
+  resolved_at?: string | null;
 }
 
 export interface ThroughputRow {
@@ -72,6 +73,7 @@ export interface WaterInfraData {
   topology: WaterInfraTopology | null;
   alerts: InfraAlert[];
   openEvents: AgentEvent[];
+  resolvedEvents: AgentEvent[];
   throughput: ThroughputRow[];
   latestReadings: LatestReading[];
   loading: boolean;
@@ -138,6 +140,18 @@ async function fetchOpenEvents(): Promise<AgentEvent[]> {
   return data ?? [];
 }
 
+async function fetchResolvedEvents(): Promise<AgentEvent[]> {
+  const { data, error } = await supabase
+    .schema('water_infra')
+    .from('agent_events')
+    .select('id,title,status,severity,component_id,details,created_at,updated_at,resolved_at')
+    .eq('status', 'resolved')
+    .order('resolved_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 async function fetchThroughput(): Promise<ThroughputRow[]> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase.rpc('water_infra_hourly_throughput', { p_since: since });
@@ -157,6 +171,7 @@ export function useWaterInfraData(): WaterInfraData {
   const [topology, setTopology] = useState<WaterInfraTopology | null>(null);
   const [alerts, setAlerts] = useState<InfraAlert[]>([]);
   const [openEvents, setOpenEvents] = useState<AgentEvent[]>([]);
+  const [resolvedEvents, setResolvedEvents] = useState<AgentEvent[]>([]);
   const [throughput, setThroughput] = useState<ThroughputRow[]>([]);
   const [latestReadings, setLatestReadings] = useState<LatestReading[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,16 +182,18 @@ export function useWaterInfraData(): WaterInfraData {
     setLoading(true);
     setError(null);
     try {
-      const [topo, alrt, evts, thru, readings] = await Promise.all([
+      const [topo, alrt, evts, resolved, thru, readings] = await Promise.all([
         fetchTopology(),
         fetchAlerts(),
         fetchOpenEvents(),
+        fetchResolvedEvents(),
         fetchThroughput(),
         fetchLatestReadings(),
       ]);
       setTopology(topo);
       setAlerts(alrt);
       setOpenEvents(evts);
+      setResolvedEvents(resolved);
       setThroughput(thru);
       setLatestReadings(readings);
       setLastRefresh(new Date());
@@ -193,5 +210,5 @@ export function useWaterInfraData(): WaterInfraData {
     return () => clearInterval(timer);
   }, [load]);
 
-  return { topology, alerts, openEvents, throughput, latestReadings, loading, error, refresh: load, lastRefresh };
+  return { topology, alerts, openEvents, resolvedEvents, throughput, latestReadings, loading, error, refresh: load, lastRefresh };
 }

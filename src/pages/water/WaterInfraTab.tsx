@@ -46,10 +46,11 @@ const CHART_OPTS = {
 };
 
 export default function WaterInfraTab() {
-  const { topology, alerts, openEvents, throughput, loading, error, refresh, lastRefresh } =
+  const { topology, alerts, openEvents, resolvedEvents, throughput, loading, error, refresh, lastRefresh } =
     useWaterInfraData();
 
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [showResolved, setShowResolved] = useState(false);
   const toggleExpand = (id: number) =>
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -147,6 +148,56 @@ export default function WaterInfraTab() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {/* Resolved events toggle */}
+          <button
+            className={styles.resolvedToggle}
+            onClick={() => setShowResolved((v) => !v)}
+          >
+            {showResolved ? '▲' : '▼'} Resolved ({resolvedEvents.length})
+          </button>
+          {showResolved && (
+            <div className={styles.resolvedList}>
+              {resolvedEvents.length === 0 ? (
+                <p className={styles.emptyMsg}>No resolved events</p>
+              ) : (
+                resolvedEvents.map((ev) => {
+                  const expanded = expandedIds.has(ev.id);
+                  return (
+                    <div key={ev.id} className={styles.resolvedItem}>
+                      <div className={styles.eventHeader}>
+                        <span className={`${styles.badge} ${badgeClass(ev.severity)}`}>
+                          {ev.severity ?? '—'}
+                        </span>
+                        <span className={styles.eventTitle}>{ev.title}</span>
+                      </div>
+                      <div className={styles.eventComponent}>
+                        {ev.component_id}
+                        {ev.resolved_at && (
+                          <span className={styles.resolvedAt}>
+                            {' · resolved '}
+                            {new Date(ev.resolved_at).toLocaleString('en-GB', {
+                              month: 'short', day: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      {ev.details && (
+                        <>
+                          <div className={expanded ? styles.eventDetailsExpanded : styles.eventDetails}>
+                            {ev.details}
+                          </div>
+                          <button className={styles.expandBtn} onClick={() => toggleExpand(ev.id)}>
+                            {expanded ? 'Show less ▲' : 'Show more ▼'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
