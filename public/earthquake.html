@@ -136,7 +136,7 @@ async function sbGet(table, params='') {
 }
 
 // Map
-const map = L.map('map', {zoomControl:false}).setView([34.765,32.425],14);
+const map = L.map('map', {zoomControl:false}).setView([34.7559714,32.4356786],15);
 L.control.zoom({position:'topright'}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'CartoDB',maxZoom:19}).addTo(map);
 
@@ -148,7 +148,7 @@ function addMarker(r) {
     const id = r.event_id||r.id; if(markers[id]) return;
     const c = COLORS[r.severity]||'#999';
     const m = L.circle([r.lat,r.lon],{radius:RADIUS[r.severity]||25,color:c,fillColor:c,fillOpacity:0.3,weight:2}).addTo(map);
-    m.bindPopup(`<b style="color:${c}">${(r.severity||'').toUpperCase()}</b><br>${r.damage_type||'Damage'}<br>${r.building||''}<br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span>`);
+    m.bindPopup(`<b style="color:${c}">${(r.severity||'').toUpperCase()}</b><br>${r.damage_type||'Damage'}<br>${r.building||''}<br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span><br><button onclick="fixDamage('${id}')" style="margin-top:8px;padding:6px 14px;font-size:11px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:6px;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(0,0,0,0.15);letter-spacing:0.5px">✓ MARK AS FIXED</button>`);
     markers[id]=m;
 }
 
@@ -225,8 +225,29 @@ async function fetchDrone() {
     if(total>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${total} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
     document.getElementById('drone-log').innerHTML=droneData.slice(0,15).map(r=>{
         const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
-        return `<div class="event"><span class="badge ${r.severity||'low'}">${r.severity||'low'}</span> ${r.damage_type||'Damage'} <span style="color:var(--text2)">at ${r.building||'—'}</span><div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div></div>`;
+        const rid=r.event_id||r.id;
+        return `<div class="event" style="cursor:pointer" onclick="flyTo(${r.lat},${r.lon},'${rid}')">
+            <span class="badge ${r.severity||'low'}">${r.severity||'low'}</span> ${r.damage_type||'Damage'} <span style="color:var(--text2)">at ${r.building||'—'}</span>
+            <div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div>
+            <button onclick="event.stopPropagation();fixDamage('${rid}')" style="margin-top:6px;padding:6px 16px;font-size:11px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:6px;cursor:pointer;display:block;width:100%;box-shadow:0 2px 4px rgba(0,0,0,0.15);letter-spacing:0.5px">✓ MARK AS FIXED</button>
+        </div>`;
     }).join('');
+}
+
+function flyTo(lat,lon,id){map.flyTo([lat,lon],18,{duration:0.8});if(markers[id])markers[id].openPopup();}
+
+async function fixDamage(id){
+    // Delete from Supabase directly
+    await fetch(`${SB_URL}/rest/v1/drone_reports?event_id=eq.${id}`,{method:'DELETE',headers:SB_H});
+    await fetch(`${SB_URL}/rest/v1/drone_reports?id=eq.${id}`,{method:'DELETE',headers:SB_H});
+    if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
+    droneData=droneData.filter(r=>(r.event_id||r.id)!=id);
+    let total=0,critical=0;
+    for(const r of droneData){total++;if(r.severity==='critical')critical++;}
+    document.getElementById('damage-count').textContent=total;
+    document.getElementById('critical-count').textContent=critical;
+    map.closePopup();
+    fetchDrone();
 }
 
 function updateStatus(){
