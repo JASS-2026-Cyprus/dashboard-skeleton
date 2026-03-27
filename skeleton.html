@@ -481,6 +481,31 @@
       margin-bottom: 0.5rem;
     }
 
+    /* Agent analysis feed */
+    .agent-entry {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 0.5px solid #f0f0f0;
+      align-items: flex-start;
+    }
+    .agent-entry:last-child { border-bottom: none; }
+    .agent-badge {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      margin-top: 1px;
+      text-transform: uppercase;
+    }
+    .agent-badge.badge-critical    { background:#fdecea; color:#c0392b; }
+    .agent-badge.badge-warning     { background:#fef3e2; color:#c77a00; }
+    .agent-badge.badge-maintenance { background:#e6f1fb; color:#185fa5; }
+    .agent-badge.badge-closed      { background:#2d1a1a; color:#ff8a8a; }
+    .agent-badge.badge-init        { background:#f0f0f0; color:#666; }
+    .agent-content { font-size:13px; color:#333; line-height:1.5; }
+
     /* Water view switcher */
     .water-view-switcher {
       display: flex;
@@ -996,6 +1021,13 @@
         <!-- Refresh bar -->
         <div class="refresh-bar">
           <span id="water-last-refresh">Never refreshed</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:12px">
+            <span id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:#aaa;display:inline-block"></span>
+            <span id="ws-label" style="color:#aaa">swarm</span>
+            &nbsp;
+            <span id="bb-dot" style="width:7px;height:7px;border-radius:50%;background:#aaa;display:inline-block"></span>
+            <span id="bb-label" style="color:#aaa">blackboard</span>
+          </span>
           <button class="refresh-btn" onclick="refreshWaterTab()">↻ Refresh</button>
         </div>
 
@@ -1076,13 +1108,7 @@
             </div>
             <div class="chart-legend" style="margin-top:0.5rem">
               <div class="chart-legend-item">
-                <div class="legend-line" style="background:#6366f1"></div>Temperature
-              </div>
-              <div class="chart-legend-item">
-                <div class="legend-line" style="border-top:1.5px dashed #f97316;background:none"></div>Jellyfish (20°C)
-              </div>
-              <div class="chart-legend-item">
-                <div class="legend-line" style="border-top:1.5px dashed #ef4444;background:none"></div>Bacterial (26°C)
+                <div class="legend-line" style="background:#6366f1"></div>Temperature (°C)
               </div>
             </div>
           </div>
@@ -1091,7 +1117,7 @@
         <!-- Delta chart: full width -->
         <div class="chart-card" style="margin-bottom:1.5rem">
           <h3 id="chart-delta-title">Inside / Outside Discrepancy (Δ)</h3>
-          <div class="chart-subtitle" id="chart-delta-subtitle">|Outside − Inside| over time · gap &gt; 5% = uneven contamination or sensor fault</div>
+          <div class="chart-subtitle" id="chart-delta-subtitle">|Outside − Inside| over time</div>
           <div style="position:relative;height:160px">
             <canvas id="chart-delta"></canvas>
           </div>
@@ -1099,45 +1125,17 @@
             <div class="chart-legend-item">
               <div class="legend-line" style="background:#a855f7"></div>Gap (Δ%)
             </div>
-            <div class="chart-legend-item">
-              <div class="legend-line" style="border-top:1.5px dashed #f97316;background:none"></div>Watch (3%)
-            </div>
-            <div class="chart-legend-item">
-              <div class="legend-line" style="border-top:1.5px dashed #ef4444;background:none"></div>Alarm (5%)
-            </div>
           </div>
         </div>
 
-        <!-- Threshold reference -->
+        <!-- Agent analysis feed -->
         <div class="card">
-          <div class="section-title">Threshold Reference</div>
-          <div class="threshold-grid">
-            <div>
-              <div class="threshold-section-title">Pool Inside / Outside Gap (Δ%)</div>
-              <table class="class-table">
-                <thead><tr><th>Gap</th><th>Meaning</th><th>Status</th></tr></thead>
-                <tbody>
-                  <tr><td>≤ 3%</td><td>Sensors agree — uniform water</td><td style="color:#3b6d11;font-weight:600">Normal</td></tr>
-                  <tr><td>3 – 5%</td><td>Minor discrepancy — monitor</td><td style="color:#c77a00;font-weight:600">Watch</td></tr>
-                  <tr><td>&gt; 5%</td><td>Uneven contamination or sensor fault</td><td style="color:#e05a00;font-weight:600">Warning</td></tr>
-                  <tr><td>&gt; 8%</td><td>Likely sensor fault or severe event</td><td style="color:#c0392b;font-weight:600">Alarm</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <div class="threshold-section-title">Sea Temperature — Paphos Coast</div>
-              <table class="class-table">
-                <thead><tr><th>Range</th><th>Meaning</th><th>Status</th></tr></thead>
-                <tbody>
-                  <tr><td>&lt; 14°C</td><td>Dangerous cold</td><td style="color:#c0392b;font-weight:600">Critical</td></tr>
-                  <tr><td>14 – 17°C</td><td>Cold shock risk</td><td style="color:#c77a00;font-weight:600">Warning</td></tr>
-                  <tr><td>17 – 20°C</td><td>Optimal</td><td style="color:#3b6d11;font-weight:600">Normal</td></tr>
-                  <tr><td>20 – 26°C</td><td>Jellyfish activation</td><td style="color:#c77a00;font-weight:600">Warning</td></tr>
-                  <tr><td>26 – 29°C</td><td>Bacterial risk</td><td style="color:#e05a00;font-weight:600">Alert</td></tr>
-                  <tr><td>≥ 29°C</td><td>Ecological risk</td><td style="color:#c0392b;font-weight:600">Critical</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="section-title">
+            Agent Analysis
+            <span class="section-subtitle" id="agent-feed-subtitle">water_quality_analyzer · swarm dashboard · localhost:2223</span>
+          </div>
+          <div id="agent-feed">
+            <div style="color:#aaa;font-size:13px;padding:0.5rem 0">Fetching agent analysis…</div>
           </div>
         </div>
 
@@ -1193,26 +1191,148 @@
       return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
-    // ── Status helpers ───────────────────────────────────────────────────────
-    // Primary pool signal: gap between inside and outside sensors
-    function deltaStatus(delta) {
-      if (delta == null) return 'loading';
-      if (delta > 8) return 'critical';  // sensor fault or severe event
-      if (delta > 5) return 'warning';   // uneven contamination
-      if (delta > 3) return 'watch';     // minor discrepancy
-      return 'normal';
+    // ── Swarm dashboard WebSocket ─────────────────────────────────────────────
+    const DASHBOARD_WS   = 'ws://localhost:2223/ws';
+    const BLACKBOARD_URL = 'https://blackboard.jass.school/api/log';
+
+    // sensor_id ↔ pool name (from demo/config.py)
+    const POOL_TO_SENSOR_ID = {
+      'Olympic Pool': 'pool_a',
+      'Main Pool':    'pool_b',
+      'Spa Pool':     'pool_c',
+    };
+    const SENSOR_ID_TO_NAME = {
+      pool_a: 'Olympic Pool',
+      pool_b: 'Main Pool',
+      pool_c: 'Spa Pool',
+      dam_1:  'Sea',
+    };
+
+    let wsLiveFeed     = [];   // live WS action events (newest first)
+    let wsInitFeed     = [];   // pre-existing state from WS init message
+    let bbFeed         = [];   // WaterAgent entries parsed from blackboard
+    let alertFeed      = [];   // merged view rebuilt by rebuildAlertFeed()
+    let wsConnected    = false;
+    let wsReconnectTmr = null;
+
+    function rebuildAlertFeed() {
+      alertFeed = [...wsLiveFeed, ...bbFeed, ...wsInitFeed];
     }
-    function seaStatus(v) {
-      if (v == null) return 'loading';
-      if (v < 14 || v >= 29) return 'critical';
-      if ((v >= 14 && v < 17) || (v >= 20 && v < 29)) return 'warning';
-      return 'normal';
+
+    function updateWsStatus(connected) {
+      wsConnected = connected;
+      document.getElementById('ws-dot').style.background   = connected ? '#22c55e' : '#aaa';
+      document.getElementById('ws-label').style.color      = connected ? '#3b6d11' : '#aaa';
+      document.getElementById('ws-label').textContent      = connected ? 'swarm live' : 'swarm offline';
     }
-    function statusColor(s) {
-      return s === 'critical' ? '#c0392b' : s === 'warning' ? '#c77a00' : s === 'watch' ? '#c77a00' : s === 'normal' ? '#3b6d11' : '#888';
+
+    function handleWsMessage(msg) {
+      if (msg.type === 'init') {
+        wsInitFeed = [];
+        for (const [sid, acts] of Object.entries(msg.actions || {})) {
+          for (const act of acts) {
+            wsInitFeed.push({
+              action:    act === 'alert' ? 'post_alert' : act === 'maintenance' ? 'send_maintenance' : 'close_facility',
+              severity:  act === 'closed' ? 'critical' : 'warning',
+              message:   `${SENSOR_ID_TO_NAME[sid] || sid} — active ${act} (pre-existing)`,
+              sensor_id: sid,
+              time:      '—',
+              isInit:    true,
+            });
+          }
+        }
+        rebuildAlertFeed();
+        renderAgentFeed();
+        updateRiskBanner();
+      }
+      else if (msg.type === 'action') {
+        const entry = {
+          action:    msg.action,
+          severity:  msg.severity || (msg.action === 'close_facility' ? 'critical' : 'warning'),
+          message:   msg.message || msg.reason || '—',
+          sensor_id: msg.sensor_id,
+          time:      msg.time || fmtNow(),
+          isInit:    false,
+        };
+        wsLiveFeed = [entry, ...wsLiveFeed].slice(0, 30);
+        rebuildAlertFeed();
+        renderAgentFeed();
+        updateRiskBanner();
+      }
     }
-    function statusLabel(s) {
-      return s === 'critical' ? 'Alarm' : s === 'warning' ? 'Warning' : s === 'watch' ? 'Watch' : s === 'normal' ? 'Normal' : '—';
+
+    // ── Blackboard polling (WaterAgent entries) ───────────────────────────────
+    function updateBbStatus(ok) {
+      const dot   = document.getElementById('bb-dot');
+      const label = document.getElementById('bb-label');
+      dot.style.background = ok ? '#22c55e' : '#aaa';
+      label.style.color    = ok ? '#3b6d11' : '#aaa';
+      label.textContent    = ok ? 'blackboard live' : 'blackboard offline';
+    }
+
+    // Parse a raw log string into a feed entry, or null if not relevant
+    function parseBlackboardEntry(raw) {
+      // Format: "[2026-03-27 07:23:24] WaterAgent: Main Pool light_intensity..."
+      const m = raw.match(/^\[(\d{4}-\d{2}-\d{2} (\d{2}:\d{2}):\d{2})\] WaterAgent: (.+)$/);
+      if (!m) return null;
+      const [, , timePart, message] = m;
+
+      // Identify which pool the entry is about
+      let sensor_id = null;
+      for (const [name, sid] of Object.entries(POOL_TO_SENSOR_ID)) {
+        if (message.includes(name)) { sensor_id = sid; break; }
+      }
+      if (!sensor_id) return null;
+
+      // Infer action/severity from keywords in the message
+      const low = message.toLowerCase();
+      let action, severity;
+      if (low.includes('near-zero') || low.includes('catastrophic') || low.includes('extreme')) {
+        action = 'close_facility'; severity = 'critical';
+      } else if (low.includes('sensor fault') || low.includes('malfunction') || low.includes('contamination')) {
+        action = 'send_maintenance'; severity = 'warning';
+      } else if (low.includes('discrepancy') || low.includes('anomaly') || low.includes('gap')) {
+        action = 'post_alert'; severity = 'warning';
+      } else {
+        return null;  // routine / no issue noted
+      }
+
+      return { action, severity, message, sensor_id, time: timePart, isBlackboard: true };
+    }
+
+    async function fetchBlackboardAlerts() {
+      try {
+        const resp = await fetch(BLACKBOARD_URL);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const entries = await resp.json();
+
+        // Walk newest-first; keep up to 5 most-recent actionable entries per pool
+        const poolCounts = {};
+        const parsed = [];
+        for (let i = entries.length - 1; i >= 0; i--) {
+          const e = parseBlackboardEntry(entries[i]);
+          if (!e) continue;
+          const cnt = poolCounts[e.sensor_id] || 0;
+          if (cnt < 5) { parsed.unshift(e); poolCounts[e.sensor_id] = cnt + 1; }
+        }
+
+        bbFeed = parsed;
+        updateBbStatus(true);
+        rebuildAlertFeed();
+        renderAgentFeed();
+        updateRiskBanner();
+      } catch (err) {
+        console.warn('[blackboard] fetch error:', err);
+        updateBbStatus(false);
+      }
+    }
+
+    function initDashboardWs() {
+      const ws = new WebSocket(DASHBOARD_WS);
+      ws.onopen    = ()    => { updateWsStatus(true); if (wsReconnectTmr) { clearTimeout(wsReconnectTmr); wsReconnectTmr = null; } };
+      ws.onmessage = (evt) => { try { handleWsMessage(JSON.parse(evt.data)); } catch(e) { console.warn('WS parse error', e); } };
+      ws.onclose   = ()    => { updateWsStatus(false); wsReconnectTmr = setTimeout(initDashboardWs, 5000); };
+      ws.onerror   = ()    => { ws.close(); };
     }
 
     // ── Water view switcher ───────────────────────────────────────────────────
@@ -1271,74 +1391,88 @@
     }
 
     // ── Update sensor cards ──────────────────────────────────────────────────
-    function updateSensorCard(cardId, dotId, labelId, valId, value, unit, statusFn, labelText) {
-      const s = statusFn(value);
-      const card = document.getElementById(cardId);
-      card.className = 'sensor-card' + (s === 'critical' ? ' status-critical' : s === 'warning' ? ' status-warning' : '');
-      document.getElementById(dotId).className = 'status-dot ' + (s === 'loading' ? 'loading' : s);
-      document.getElementById(labelId).textContent = labelText + ' · ' + statusLabel(s);
-      document.getElementById(labelId).style.color = statusColor(s);
-      const v = value != null ? value.toFixed(1) + unit : '—' + unit;
-      document.getElementById(valId).innerHTML = value != null
-        ? `<span style="color:${statusColor(s)}">${value.toFixed(1)}</span><span class="sensor-unit"> ${unit}</span>`
-        : `—<span class="sensor-unit"> ${unit}</span>`;
-    }
 
-    // ── Risk banner ──────────────────────────────────────────────────────────
-    // Primary signal: inside/outside delta. Sea temp is secondary.
-    function updateRiskBanner(delta, latestOut, latestIn, latestSea) {
-      const banner  = document.getElementById('water-risk-banner');
-      const icon    = document.getElementById('water-risk-icon');
-      const label   = document.getElementById('water-risk-label');
-      const detail  = document.getElementById('water-risk-detail');
+    // ── Risk banner — driven by swarm alerts ─────────────────────────────────
+    function updateRiskBanner() {
+      const banner = document.getElementById('water-risk-banner');
+      const icon   = document.getElementById('water-risk-icon');
+      const label  = document.getElementById('water-risk-label');
+      const detail = document.getElementById('water-risk-detail');
 
-      const ds = deltaStatus(delta);
-      const ss = seaStatus(latestSea);
-      const order = { critical: 3, warning: 2, watch: 1, normal: 0, loading: -1 };
-      const worst = order[ds] >= order[ss] ? ds : ss;
+      const sensorId = POOL_TO_SENSOR_ID[selectedPool];
+      // Most recent live alert for this pool
+      const entry = alertFeed.find(e => e.sensor_id === sensorId);
 
       banner.className = 'risk-banner';
-      const issues = [];
 
-      // Pool analysis based on delta
-      if (delta != null) {
-        if (ds === 'critical') {
-          issues.push(`Pool gap ${delta.toFixed(1)}% — likely sensor fault or severe event`);
-        } else if (ds === 'warning') {
-          const higher = latestOut > latestIn ? 'outside' : 'inside';
-          issues.push(`Pool gap ${delta.toFixed(1)}% — uneven contamination (${higher} higher)`);
-        } else if (ds === 'watch') {
-          issues.push(`Pool gap ${delta.toFixed(1)}% — minor discrepancy, monitoring`);
-        }
-      }
-      if (ss === 'critical') issues.push(`Sea temp out of range (${latestSea?.toFixed(1)}°C)`);
-      else if (ss === 'warning') issues.push(`Sea temp advisory (${latestSea?.toFixed(1)}°C)`);
-
-      if (worst === 'critical') {
-        banner.classList.add('risk-danger');
-        icon.textContent = '🚨';
-        label.style.color = '#c0392b';
-        label.textContent = 'ALARM';
-        detail.textContent = issues.join(' · ') || 'Critical sensor discrepancy detected';
-      } else if (worst === 'warning') {
-        banner.classList.add('risk-alert');
-        icon.textContent = '⚠️';
-        label.style.color = '#c77a00';
-        label.textContent = 'ALERT';
-        detail.textContent = issues.join(' · ') || 'Sensor discrepancy above warning threshold';
-      } else if (worst === 'watch') {
-        banner.classList.add('risk-alert');
-        icon.textContent = '👁';
-        label.style.color = '#c77a00';
-        label.textContent = 'WATCH';
-        detail.textContent = issues.join(' · ') || 'Minor discrepancy — keep monitoring';
-      } else {
+      if (!entry) {
         banner.classList.add('risk-clear');
         icon.textContent = '✅';
         label.style.color = '#3b6d11';
         label.textContent = 'ALL CLEAR';
-        detail.textContent = 'Sensors agree — no discrepancy detected';
+        detail.textContent = 'No alerts from agent for ' + selectedPool;
+        return;
       }
+
+      if (entry.action === 'close_facility' || entry.severity === 'critical') {
+        banner.classList.add('risk-danger');
+        icon.textContent = '🚨';
+        label.style.color = '#c0392b';
+        label.textContent = 'CRITICAL';
+      } else if (entry.action === 'send_maintenance') {
+        banner.classList.add('risk-alert');
+        icon.textContent = '🔧';
+        label.style.color = '#c77a00';
+        label.textContent = 'MAINTENANCE';
+      } else {
+        banner.classList.add('risk-alert');
+        icon.textContent = '⚠️';
+        label.style.color = '#c77a00';
+        label.textContent = 'WARNING';
+      }
+      detail.textContent = entry.message;
+    }
+
+    // ── Agent feed renderer ───────────────────────────────────────────────────
+    function renderAgentFeed() {
+      const feed = document.getElementById('agent-feed');
+      const sensorId = POOL_TO_SENSOR_ID[selectedPool];
+
+      // Pool entries first, then the rest
+      const poolEntries  = alertFeed.filter(e => e.sensor_id === sensorId);
+      const otherEntries = alertFeed.filter(e => e.sensor_id !== sensorId);
+      const display = [...poolEntries, ...otherEntries].slice(0, 15);
+
+      if (!display.length) {
+        feed.innerHTML = '<div style="color:#aaa;font-size:13px;padding:0.5rem 0">No alerts for ' + selectedPool + ' — agent is monitoring</div>';
+        return;
+      }
+
+      const ACTION_LABEL = {
+        post_alert:        'alert',
+        send_maintenance:  'maintenance',
+        close_facility:    'closed',
+      };
+      const ACTION_BADGE = {
+        post_alert:       (e) => e.severity === 'critical' ? 'critical' : 'warning',
+        send_maintenance: ()  => 'maintenance',
+        close_facility:   ()  => 'closed',
+      };
+
+      feed.innerHTML = display.map(e => {
+        const badgeClass = (ACTION_BADGE[e.action] || (() => 'init'))(e);
+        const badgeText  = e.isInit
+          ? ACTION_LABEL[e.action] || e.action
+          : (e.severity === 'critical' ? 'critical' : ACTION_LABEL[e.action] || e.action);
+        const sensorLabel = SENSOR_ID_TO_NAME[e.sensor_id] || e.sensor_id;
+        const timeStr     = e.time && e.time !== '—' ? `<span style="color:#aaa;font-family:monospace;font-size:0.67rem;margin-right:0.4rem">${e.time}</span>` : '';
+        const poolTag     = e.sensor_id !== sensorId
+          ? `<span style="font-size:0.65rem;color:#aaa;margin-left:0.3rem">[${sensorLabel}]</span>` : '';
+        return `<div class="agent-entry">
+          <span class="agent-badge badge-${badgeClass}">${badgeText}</span>
+          <span class="agent-content">${timeStr}${e.message}${poolTag}</span>
+        </div>`;
+      }).join('');
     }
 
     // ── Overview spark line (shows delta over time) ──────────────────────────
@@ -1433,18 +1567,6 @@
               borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)',
               borderWidth: 2, pointRadius: 2, fill: true, tension: 0.35,
             },
-            {
-              label: 'Jellyfish risk',
-              data: Array(n).fill(20),
-              borderColor: '#f97316', borderWidth: 1, borderDash: [5, 4],
-              pointRadius: 0, fill: false,
-            },
-            {
-              label: 'Bacterial risk',
-              data: Array(n).fill(26),
-              borderColor: '#ef4444', borderWidth: 1, borderDash: [5, 4],
-              pointRadius: 0, fill: false,
-            },
           ],
         },
         options: {
@@ -1476,18 +1598,6 @@
               borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)',
               borderWidth: 2, pointRadius: 2, fill: true, tension: 0.35,
             },
-            {
-              label: 'Watch',
-              data: Array(n).fill(3),
-              borderColor: '#f97316', borderWidth: 1, borderDash: [5, 4],
-              pointRadius: 0, fill: false,
-            },
-            {
-              label: 'Alarm',
-              data: Array(n).fill(5),
-              borderColor: '#ef4444', borderWidth: 1, borderDash: [5, 4],
-              pointRadius: 0, fill: false,
-            },
           ],
         },
         options: {
@@ -1510,23 +1620,21 @@
       try {
         const { poolOut, poolIn, seaData } = await fetchWaterData();
 
-        const latestOut = poolOut.length ? poolOut[poolOut.length - 1].value : null;
-        const latestIn  = poolIn.length  ? poolIn[poolIn.length - 1].value  : null;
-        const latestSea = seaData.length ? seaData[seaData.length - 1].value : null;
-
-        // Compute delta series and latest delta
-        const deltaData  = computeDelta(poolOut, poolIn);
+        const latestOut   = poolOut.length  ? poolOut[poolOut.length - 1].value   : null;
+        const latestIn    = poolIn.length   ? poolIn[poolIn.length - 1].value     : null;
+        const latestSea   = seaData.length  ? seaData[seaData.length - 1].value   : null;
+        const deltaData   = computeDelta(poolOut, poolIn);
         const latestDelta = deltaData.length ? deltaData[deltaData.length - 1].value : null;
 
-        // Update dynamic labels for selected pool
+        // Dynamic labels
         document.getElementById('name-pool-out').textContent = selectedPool + ' · Outside';
         document.getElementById('name-pool-in').textContent  = selectedPool + ' · Inside';
-        document.getElementById('chart-pool-title').textContent = selectedPool + ' — Light Intensity';
+        document.getElementById('chart-pool-title').textContent    = selectedPool + ' — Light Intensity';
         document.getElementById('chart-pool-subtitle').textContent = selectedPool + ' · Inside & Outside overlaid · Last 50 readings';
-        document.getElementById('chart-delta-title').textContent = selectedPool + ' — Inside / Outside Discrepancy (Δ)';
-        document.getElementById('chart-delta-subtitle').textContent = selectedPool + ' · |Outside − Inside| · gap > 5% = uneven contamination or sensor fault';
+        document.getElementById('chart-delta-title').textContent    = selectedPool + ' — Inside / Outside Discrepancy (Δ)';
+        document.getElementById('chart-delta-subtitle').textContent = selectedPool + ' · |Outside − Inside| over time';
 
-        // Outside & inside cards: raw values only, no status judgment
+        // Sensor cards — raw values, no threshold coloring
         document.getElementById('card-pool-out').className = 'sensor-card';
         document.getElementById('dot-pool-out').className  = 'status-dot normal';
         document.getElementById('label-pool-out').textContent = 'Outside · raw reading';
@@ -1542,27 +1650,40 @@
         document.getElementById('val-pool-in').innerHTML = latestIn != null
           ? `${latestIn.toFixed(1)}<span class="sensor-unit"> %</span>`
           : `—<span class="sensor-unit"> %</span>`;
-        updateSensorCard('card-sea',      'dot-sea',      'label-sea',      'val-sea',      latestSea, '°C', seaStatus, 'Sea Temperature');
 
-        // Delta card — primary pool signal
-        const ds = deltaStatus(latestDelta);
-        const deltaCard = document.getElementById('card-delta');
-        deltaCard.className = 'sensor-card' + (ds === 'critical' ? ' status-critical' : (ds === 'warning' || ds === 'watch') ? ' status-warning' : '');
-        document.getElementById('dot-delta').className = 'status-dot ' + (ds === 'loading' ? 'loading' : ds === 'watch' ? 'warning' : ds);
-        document.getElementById('label-delta').textContent = 'Discrepancy · ' + statusLabel(ds);
-        document.getElementById('label-delta').style.color = statusColor(ds);
+        document.getElementById('card-sea').className = 'sensor-card';
+        document.getElementById('dot-sea').className  = 'status-dot normal';
+        document.getElementById('label-sea').textContent = 'Sea Temperature · raw reading';
+        document.getElementById('label-sea').style.color = '#888';
+        document.getElementById('val-sea').innerHTML = latestSea != null
+          ? `${latestSea.toFixed(1)}<span class="sensor-unit"> °C</span>`
+          : `—<span class="sensor-unit"> °C</span>`;
+
+        document.getElementById('card-delta').className = 'sensor-card';
+        document.getElementById('dot-delta').className  = 'status-dot normal';
+        document.getElementById('label-delta').textContent = 'Inside / Outside gap';
+        document.getElementById('label-delta').style.color = '#888';
         document.getElementById('val-delta').innerHTML = latestDelta != null
-          ? `<span style="color:${statusColor(ds)}">${latestDelta.toFixed(1)}</span><span class="sensor-unit"> Δ%</span>`
+          ? `${latestDelta.toFixed(1)}<span class="sensor-unit"> Δ%</span>`
           : `—<span class="sensor-unit"> Δ%</span>`;
 
-        // Risk banner — driven by delta
-        updateRiskBanner(latestDelta, latestOut, latestIn, latestSea);
+        // Risk banner and feed — driven by live swarm alerts (WebSocket)
+        updateRiskBanner();
+        renderAgentFeed();
 
-        // Overview widget — shows delta for selected pool
+        // Overview widget
         document.getElementById('overview-water-val').textContent = latestDelta != null ? 'Δ ' + latestDelta.toFixed(1) + '%' : '—';
-        const ovStatus = document.getElementById('overview-water-status');
-        ovStatus.textContent = statusLabel(ds);
-        ovStatus.style.color = statusColor(ds);
+        const sensorId  = POOL_TO_SENSOR_ID[selectedPool];
+        const topEntry  = alertFeed.find(e => e.sensor_id === sensorId);
+        const ovStatus  = document.getElementById('overview-water-status');
+        if (topEntry) {
+          const isCrit = topEntry.action === 'close_facility' || topEntry.severity === 'critical';
+          ovStatus.textContent = isCrit ? 'Critical' : topEntry.action === 'send_maintenance' ? 'Maintenance' : 'Warning';
+          ovStatus.style.color = isCrit ? '#c0392b' : '#c77a00';
+        } else {
+          ovStatus.textContent = wsConnected ? 'Normal' : '—';
+          ovStatus.style.color = wsConnected ? '#3b6d11' : '#888';
+        }
         document.getElementById('overview-sea-val').textContent = latestSea != null ? latestSea.toFixed(1) + '°C' : '—';
         updateOverviewSpark(deltaData);
 
@@ -1585,6 +1706,9 @@
     // ── Boot ─────────────────────────────────────────────────────────────────
     window.addEventListener('load', () => {
       initSupabase();
+      initDashboardWs();
+      fetchBlackboardAlerts();
+      setInterval(fetchBlackboardAlerts, 30000);
       refreshWaterTab();
       setInterval(refreshWaterTab, 60000);
     });
