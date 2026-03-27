@@ -481,6 +481,33 @@
       margin-bottom: 0.5rem;
     }
 
+    /* Water view switcher */
+    .water-view-switcher {
+      display: flex;
+      gap: 2px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      padding: 3px;
+      width: fit-content;
+      margin-bottom: 1.25rem;
+    }
+    .water-view-btn {
+      padding: 5px 20px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .water-view-btn.active {
+      background: white;
+      color: #1a1a1a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
     /* Pool selector */
     .pool-selector {
       display: flex;
@@ -629,7 +656,11 @@
             <button class="details-btn" onclick="showTab('water', document.querySelectorAll('.nav-item')[3])">Details ↗</button>
           </div>
           <p>Pool &amp; sea sensors. Light intensity &amp; temperature.</p>
-          <div style="font-size:12px;font-weight:600;color:#378add;margin-bottom:0.75rem" id="overview-pool-label">—</div>
+          <select id="overview-pool-select" onchange="selectPool(this.value, document.querySelector('.pool-btn[data-pool=\'' + this.value + '\']'))" style="width:100%;margin-bottom:0.75rem;padding:5px 8px;font-size:13px;font-family:inherit;border:0.5px solid #d0d0d0;border-radius:8px;background:white;color:#1a1a1a;cursor:pointer;outline:none;">
+            <option value="Olympic Pool">Olympic Pool</option>
+            <option value="Main Pool" selected>Main Pool</option>
+            <option value="Spa Pool">Spa Pool</option>
+          </select>
 
           <div class="graph-container">
             <div class="graph-header">
@@ -953,6 +984,15 @@
       <!-- ===================== WATER QUALITY TAB ===================== -->
       <div class="tab-view" id="tab-water">
 
+        <!-- View switcher -->
+        <div class="water-view-switcher">
+          <button class="water-view-btn active" onclick="switchWaterView('pools', this)">Pools</button>
+          <button class="water-view-btn" onclick="switchWaterView('map', this)">Map</button>
+        </div>
+
+        <!-- ── POOLS VIEW ── -->
+        <div id="water-view-pools">
+
         <!-- Refresh bar -->
         <div class="refresh-bar">
           <span id="water-last-refresh">Never refreshed</span>
@@ -1101,6 +1141,15 @@
           </div>
         </div>
 
+        </div><!-- /water-view-pools -->
+
+        <!-- ── MAP VIEW ── -->
+        <div id="water-view-map" style="display:none">
+          <div style="height:400px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border-radius:12px;border:0.5px solid #e0e0e0;color:#aaa;font-size:14px">
+            Map coming soon
+          </div>
+        </div>
+
       </div><!-- /tab-water -->
 
     </main>
@@ -1166,11 +1215,23 @@
       return s === 'critical' ? 'Alarm' : s === 'warning' ? 'Warning' : s === 'watch' ? 'Watch' : s === 'normal' ? 'Normal' : '—';
     }
 
+    // ── Water view switcher ───────────────────────────────────────────────────
+    function switchWaterView(view, btn) {
+      document.querySelectorAll('.water-view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('water-view-pools').style.display = view === 'pools' ? '' : 'none';
+      document.getElementById('water-view-map').style.display   = view === 'map'   ? '' : 'none';
+    }
+
     // ── Pool selection ────────────────────────────────────────────────────────
     function selectPool(poolName, btn) {
       selectedPool = poolName;
+      // Sync pill buttons in Water tab
       document.querySelectorAll('.pool-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      if (btn) btn.classList.add('active');
+      // Sync overview dropdown
+      const sel = document.getElementById('overview-pool-select');
+      if (sel) sel.value = poolName;
       refreshWaterTab();
     }
 
@@ -1498,7 +1559,6 @@
         updateRiskBanner(latestDelta, latestOut, latestIn, latestSea);
 
         // Overview widget — shows delta for selected pool
-        document.getElementById('overview-pool-label').textContent = selectedPool;
         document.getElementById('overview-water-val').textContent = latestDelta != null ? 'Δ ' + latestDelta.toFixed(1) + '%' : '—';
         const ovStatus = document.getElementById('overview-water-status');
         ovStatus.textContent = statusLabel(ds);
