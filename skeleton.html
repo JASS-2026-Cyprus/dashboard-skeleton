@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cockpit Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -131,7 +133,7 @@
       height: 8px;
       border-radius: 50%;
     }
-    .dot.blue { background: #85b7eb; }
+    .dot.blue  { background: #85b7eb; }
     .dot.green { background: #97c459; }
     .widget-title h3 {
       font-size: 16px;
@@ -420,6 +422,89 @@
       border-radius: 1px;
       flex-shrink: 0;
     }
+
+    /* Water quality specific */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .sensor-card {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+    }
+    .sensor-card.status-warning { border-color: #f5a623; background: #fffdf5; }
+    .sensor-card.status-critical { border-color: #e53935; background: #fff8f8; }
+    .sensor-name { font-size: 0.72rem; color: #888; margin-bottom: 0.25rem; }
+    .sensor-val { font-size: 1.8rem; font-weight: 700; color: #1a1a1a; }
+    .sensor-unit { font-size: 0.85rem; font-weight: 400; color: #888; }
+    .sensor-status-row { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; font-size: 0.72rem; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.normal   { background: #22c55e; }
+    .status-dot.warning  { background: #f5a623; }
+    .status-dot.critical { background: #e53935; }
+    .status-dot.loading  { background: #aaa; }
+
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 12px;
+      color: #888;
+    }
+    .refresh-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+      background: transparent;
+      border: 0.5px solid #d0d0d0;
+      border-radius: 8px;
+      color: #555;
+      cursor: pointer;
+    }
+    .refresh-btn:hover { background: #f5f5f5; }
+
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 600px) { .threshold-grid { grid-template-columns: 1fr; } }
+    .threshold-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Pool selector */
+    .pool-selector {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .pool-btn {
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 0.5px solid #d0d0d0;
+      background: white;
+      font-size: 13px;
+      font-weight: 500;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pool-btn.active {
+      background: #378add;
+      border-color: #378add;
+      color: white;
+    }
+    .pool-btn:not(.active):hover { background: #f0f6fd; border-color: #b0d0ef; }
   </style>
 </head>
 <body>
@@ -433,7 +518,7 @@
         <div class="nav-divider"></div>
         <div class="nav-item" onclick="showTab('maintenance', this)">Maintenance</div>
         <div class="nav-item" onclick="showTab('overview', this)">Air Quality</div>
-        <div class="nav-item" onclick="showTab('overview', this)">Water</div>
+        <div class="nav-item" onclick="showTab('water', this)">Water Quality</div>
         <div class="nav-item" onclick="showTab('overview', this)">Earthquake</div>
       </nav>
     </aside>
@@ -539,32 +624,32 @@
           <div class="widget-header">
             <div class="widget-title">
               <div class="dot blue"></div>
-              <h3>Water</h3>
+              <h3>Water Quality</h3>
             </div>
-            <button class="details-btn">Details ↗</button>
+            <button class="details-btn" onclick="showTab('water', document.querySelectorAll('.nav-item')[3])">Details ↗</button>
           </div>
-          <p>12 quality sensors. pH and turbidity tracking.</p>
+          <p>Pool &amp; sea sensors. Light intensity &amp; temperature.</p>
+          <div style="font-size:12px;font-weight:600;color:#378add;margin-bottom:0.75rem" id="overview-pool-label">—</div>
 
           <div class="graph-container">
             <div class="graph-header">
-              <span>pH levels (24h)</span>
-              <span>7.2</span>
+              <span>Inside / Outside gap (Δ%)</span>
+              <span id="overview-water-val">…</span>
             </div>
-            <svg viewBox="0 0 240 60" style="width: 100%; height: 60px;">
-              <polyline points="0,45 20,42 40,38 60,35 80,32 100,30 120,28 140,32 160,35 180,38 200,40 220,42 240,44" fill="none" stroke="#378add" stroke-width="2"/>
-              <polyline points="0,45 20,42 40,38 60,35 80,32 100,30 120,28 140,32 160,35 180,38 200,40 220,42 240,44 240,60 0,60" fill="#378add" opacity="0.1"/>
+            <svg id="overview-water-spark" viewBox="0 0 240 60" style="width: 100%; height: 60px;">
               <line x1="0" y1="60" x2="240" y2="60" stroke="#e0e0e0" stroke-width="0.5"/>
+              <text x="120" y="35" text-anchor="middle" font-size="11" fill="#ccc">Loading…</text>
             </svg>
           </div>
 
           <div class="stats">
             <div class="stat-row">
-              <span>Status</span>
-              <span class="status-success">Normal</span>
+              <span>Gap status</span>
+              <span id="overview-water-status" style="font-weight:500;color:#888">—</span>
             </div>
             <div class="stat-row">
-              <span>Sensors</span>
-              <span>12 / 12</span>
+              <span>Sea temp</span>
+              <span id="overview-sea-val" style="font-weight:500">—</span>
             </div>
           </div>
         </div>
@@ -659,17 +744,11 @@
             <div class="chart-subtitle">YOLO detections by class · 142 total</div>
             <div class="pie-layout">
               <svg viewBox="0 0 200 180" style="width:160px;flex-shrink:0">
-                <!-- waste bag: 40.85% → 147.1° → start -90°, end 57.1° -->
                 <path d="M100,90 L100,10 A80,80 0 0,1 143,157 Z" fill="#6366f1"/>
-                <!-- bottle: 26.76% → 96.3° → start 57.1°, end 153.4° -->
                 <path d="M100,90 L143,157 A80,80 0 0,1 29,126 Z" fill="#22c55e"/>
-                <!-- cardboard: 16.9% → 60.8° → start 153.4°, end 214.2° -->
                 <path d="M100,90 L29,126 A80,80 0 0,1 34,45 Z" fill="#f97316"/>
-                <!-- tire: 9.86% → 35.5° → start 214.2°, end 249.7° -->
                 <path d="M100,90 L34,45 A80,80 0 0,1 72,15 Z" fill="#ef4444"/>
-                <!-- can: 5.63% → 20.3° → start 249.7°, end 270° -->
                 <path d="M100,90 L72,15 A80,80 0 0,1 100,10 Z" fill="#eab308"/>
-                <!-- centre hole (donut) -->
                 <circle cx="100" cy="90" r="42" fill="white"/>
                 <text x="100" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1a1a">142</text>
                 <text x="100" y="100" text-anchor="middle" font-size="9" fill="#888">objects</text>
@@ -709,19 +788,15 @@
             <h3>VLM Confidence per Window</h3>
             <div class="chart-subtitle">Detection confidence across 12 time windows</div>
             <svg viewBox="0 0 300 110" style="width:100%;display:block">
-              <!-- Y-axis grid lines -->
               <line class="line-grid-line" x1="32" y1="10" x2="290" y2="10"/>
               <line class="line-grid-line" x1="32" y1="35" x2="290" y2="35"/>
               <line class="line-grid-line" x1="32" y1="60" x2="290" y2="60"/>
               <line class="line-grid-line" x1="32" y1="85" x2="290" y2="85"/>
-              <!-- Y-axis labels -->
               <text class="line-axis-label" x="26" y="13" text-anchor="end">1.0</text>
               <text class="line-axis-label" x="26" y="38" text-anchor="end">0.75</text>
               <text class="line-axis-label" x="26" y="63" text-anchor="end">0.5</text>
               <text class="line-axis-label" x="26" y="88" text-anchor="end">0.25</text>
-              <!-- X-axis baseline -->
               <line stroke="#e0e0e0" stroke-width="0.5" x1="32" y1="85" x2="290" y2="85"/>
-              <!-- X-axis window labels -->
               <text class="line-axis-label" x="34"  y="98" text-anchor="middle">1</text>
               <text class="line-axis-label" x="57"  y="98" text-anchor="middle">2</text>
               <text class="line-axis-label" x="80"  y="98" text-anchor="middle">3</text>
@@ -734,35 +809,15 @@
               <text class="line-axis-label" x="241" y="98" text-anchor="middle">10</text>
               <text class="line-axis-label" x="264" y="98" text-anchor="middle">11</text>
               <text class="line-axis-label" x="287" y="98" text-anchor="middle">12</text>
-              <!--
-                Y mapping: y = 85 - conf * 75   (0→85, 1→10)
-                X mapping: x = 34 + i * 23      (i=0..11)
-                Waste conf:     [.87,.45,.23,.81,.62,.34,.79,.41,.85,.38,.21,.19]
-                Fire conf:      [.08,.12,.05,.11,.07,.09,.06,.13,.08,.10,.04,.07]
-                Structural conf:[.15,.22,.74,.31,.18,.23,.19,.28,.16,.20,.71,.25]
-              -->
-              <!-- Waste detection line (purple) -->
               <polyline
                 fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linejoin="round"
-                points="
-                  34,20  57,51  80,68  103,24  126,39  149,59
-                  172,26  195,54  218,21  241,57  264,69  287,71
-                "/>
-              <!-- Structural damage line (orange) -->
+                points="34,20  57,51  80,68  103,24  126,39  149,59  172,26  195,54  218,21  241,57  264,69  287,71"/>
               <polyline
                 fill="none" stroke="#f97316" stroke-width="1.8" stroke-linejoin="round"
-                points="
-                  34,74  57,68  80,30  103,62  126,72  149,68
-                  172,71  195,64  218,73  241,70  264,32  287,66
-                "/>
-              <!-- Fire/smoke line (green, near-flat/low) -->
+                points="34,74  57,68  80,30  103,62  126,72  149,68  172,71  195,64  218,73  241,70  264,32  287,66"/>
               <polyline
                 fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linejoin="round"
-                points="
-                  34,79  57,76  80,81  103,77  126,80  149,78
-                  172,80  195,75  218,79  241,78  264,82  287,80
-                "/>
-              <!-- Alert threshold line at 0.5 -->
+                points="34,79  57,76  80,81  103,77  126,80  149,78  172,80  195,75  218,79  241,78  264,82  287,80"/>
               <line x1="32" y1="48" x2="290" y2="48"
                     stroke="#ef4444" stroke-width="0.8" stroke-dasharray="4,3"/>
               <text class="line-axis-label" x="292" y="51" fill="#ef4444">0.5</text>
@@ -839,7 +894,6 @@
             <span class="pill pill-done">done</span>
           </div>
 
-          <!-- Terminal log -->
           <div class="terminal">
             <div class="tline l-start"><span class="ttime">14:02:01</span><span class="tmsg">Pipeline started — 3 tasks, 12 windows</span></div>
             <div class="tline l-window"><span class="ttime">14:02:03</span><span class="tmsg">Processing window 1/12 [0.0s–8.0s]</span></div>
@@ -851,7 +905,6 @@
             <div class="tline l-done"><span class="ttime">14:02:31</span><span class="tmsg">Pipeline complete — 12/12 windows processed</span></div>
           </div>
 
-          <!-- VLM task cards -->
           <div class="task-grid">
             <div class="task-card state-detected">
               <div class="task-header">
@@ -897,15 +950,584 @@
 
       </div><!-- /tab-maintenance -->
 
+      <!-- ===================== WATER QUALITY TAB ===================== -->
+      <div class="tab-view" id="tab-water">
+
+        <!-- Refresh bar -->
+        <div class="refresh-bar">
+          <span id="water-last-refresh">Never refreshed</span>
+          <button class="refresh-btn" onclick="refreshWaterTab()">↻ Refresh</button>
+        </div>
+
+        <!-- Pool selector -->
+        <div class="pool-selector" id="pool-selector">
+          <button class="pool-btn" data-pool="Olympic Pool" onclick="selectPool('Olympic Pool', this)">Olympic Pool</button>
+          <button class="pool-btn active" data-pool="Main Pool" onclick="selectPool('Main Pool', this)">Main Pool</button>
+          <button class="pool-btn" data-pool="Spa Pool" onclick="selectPool('Spa Pool', this)">Spa Pool</button>
+        </div>
+
+        <!-- Risk banner -->
+        <div id="water-risk-banner" class="risk-banner risk-pending">
+          <div class="risk-icon" id="water-risk-icon">⏳</div>
+          <div>
+            <div class="risk-label" id="water-risk-label" style="color:#888">LOADING</div>
+            <div class="risk-detail" id="water-risk-detail">Fetching sensor data from Supabase…</div>
+          </div>
+        </div>
+
+        <!-- Sensor cards -->
+        <div class="sensor-grid">
+          <div class="sensor-card" id="card-pool-out">
+            <div class="sensor-name" id="name-pool-out">— · Outside</div>
+            <div class="sensor-val" id="val-pool-out">—<span class="sensor-unit"> %</span></div>
+            <div class="sensor-status-row">
+              <div class="status-dot loading" id="dot-pool-out"></div>
+              <span id="label-pool-out" style="color:#888">Light Intensity</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-pool-in">
+            <div class="sensor-name" id="name-pool-in">— · Inside</div>
+            <div class="sensor-val" id="val-pool-in">—<span class="sensor-unit"> %</span></div>
+            <div class="sensor-status-row">
+              <div class="status-dot loading" id="dot-pool-in"></div>
+              <span id="label-pool-in" style="color:#888">Light Intensity</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-sea">
+            <div class="sensor-name">Paphos Coast · Sea</div>
+            <div class="sensor-val" id="val-sea">—<span class="sensor-unit"> °C</span></div>
+            <div class="sensor-status-row">
+              <div class="status-dot loading" id="dot-sea"></div>
+              <span id="label-sea" style="color:#888">Sea Temperature</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-delta">
+            <div class="sensor-name">Inside / Outside Gap</div>
+            <div class="sensor-val" id="val-delta">—<span class="sensor-unit"> Δ%</span></div>
+            <div class="sensor-status-row">
+              <div class="status-dot loading" id="dot-delta"></div>
+              <span id="label-delta" style="color:#888">Discrepancy</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row 1: raw readings -->
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3 id="chart-pool-title">Pool Light Intensity — Raw</h3>
+            <div class="chart-subtitle" id="chart-pool-subtitle">— · Inside &amp; Outside overlaid · Last 50 readings</div>
+            <div style="position:relative;height:180px">
+              <canvas id="chart-pool"></canvas>
+            </div>
+            <div class="chart-legend" style="margin-top:0.5rem">
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#378add"></div>Outside
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#22c55e"></div>Inside
+              </div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Sea Temperature</h3>
+            <div class="chart-subtitle">Paphos Coast · Last 50 readings</div>
+            <div style="position:relative;height:180px">
+              <canvas id="chart-sea"></canvas>
+            </div>
+            <div class="chart-legend" style="margin-top:0.5rem">
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#6366f1"></div>Temperature
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="border-top:1.5px dashed #f97316;background:none"></div>Jellyfish (20°C)
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="border-top:1.5px dashed #ef4444;background:none"></div>Bacterial (26°C)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delta chart: full width -->
+        <div class="chart-card" style="margin-bottom:1.5rem">
+          <h3 id="chart-delta-title">Inside / Outside Discrepancy (Δ)</h3>
+          <div class="chart-subtitle" id="chart-delta-subtitle">|Outside − Inside| over time · gap &gt; 5% = uneven contamination or sensor fault</div>
+          <div style="position:relative;height:160px">
+            <canvas id="chart-delta"></canvas>
+          </div>
+          <div class="chart-legend" style="margin-top:0.5rem">
+            <div class="chart-legend-item">
+              <div class="legend-line" style="background:#a855f7"></div>Gap (Δ%)
+            </div>
+            <div class="chart-legend-item">
+              <div class="legend-line" style="border-top:1.5px dashed #f97316;background:none"></div>Watch (3%)
+            </div>
+            <div class="chart-legend-item">
+              <div class="legend-line" style="border-top:1.5px dashed #ef4444;background:none"></div>Alarm (5%)
+            </div>
+          </div>
+        </div>
+
+        <!-- Threshold reference -->
+        <div class="card">
+          <div class="section-title">Threshold Reference</div>
+          <div class="threshold-grid">
+            <div>
+              <div class="threshold-section-title">Pool Inside / Outside Gap (Δ%)</div>
+              <table class="class-table">
+                <thead><tr><th>Gap</th><th>Meaning</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td>≤ 3%</td><td>Sensors agree — uniform water</td><td style="color:#3b6d11;font-weight:600">Normal</td></tr>
+                  <tr><td>3 – 5%</td><td>Minor discrepancy — monitor</td><td style="color:#c77a00;font-weight:600">Watch</td></tr>
+                  <tr><td>&gt; 5%</td><td>Uneven contamination or sensor fault</td><td style="color:#e05a00;font-weight:600">Warning</td></tr>
+                  <tr><td>&gt; 8%</td><td>Likely sensor fault or severe event</td><td style="color:#c0392b;font-weight:600">Alarm</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="threshold-section-title">Sea Temperature — Paphos Coast</div>
+              <table class="class-table">
+                <thead><tr><th>Range</th><th>Meaning</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td>&lt; 14°C</td><td>Dangerous cold</td><td style="color:#c0392b;font-weight:600">Critical</td></tr>
+                  <tr><td>14 – 17°C</td><td>Cold shock risk</td><td style="color:#c77a00;font-weight:600">Warning</td></tr>
+                  <tr><td>17 – 20°C</td><td>Optimal</td><td style="color:#3b6d11;font-weight:600">Normal</td></tr>
+                  <tr><td>20 – 26°C</td><td>Jellyfish activation</td><td style="color:#c77a00;font-weight:600">Warning</td></tr>
+                  <tr><td>26 – 29°C</td><td>Bacterial risk</td><td style="color:#e05a00;font-weight:600">Alert</td></tr>
+                  <tr><td>≥ 29°C</td><td>Ecological risk</td><td style="color:#c0392b;font-weight:600">Critical</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-water -->
+
     </main>
   </div>
+
   <script>
+    // ── Tab navigation ───────────────────────────────────────────────────────
     function showTab(tabId, navEl) {
       document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
       document.getElementById('tab-' + tabId).classList.add('active');
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       navEl.classList.add('active');
     }
+
+    // ── Supabase config ──────────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://mbscfyikhkbvaotthcnm.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic2NmeWlraGtidmFvdHRoY25tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzI2MjMsImV4cCI6MjA5MDAwODYyM30.pR3B-W1rkFJt_DY4UZ4d7lPVPp0AfadoOozcnH8audY';
+
+    const POOLS = ['Olympic Pool', 'Main Pool', 'Spa Pool'];
+    let selectedPool = 'Main Pool';
+
+    let sb = null;
+    let poolChart = null;
+    let seaChart  = null;
+
+    function initSupabase() {
+      const { createClient } = window.supabase;
+      sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function fmtHHMM(iso) {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtHHMMSS(iso) {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    function fmtNow() {
+      return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // ── Status helpers ───────────────────────────────────────────────────────
+    // Primary pool signal: gap between inside and outside sensors
+    function deltaStatus(delta) {
+      if (delta == null) return 'loading';
+      if (delta > 8) return 'critical';  // sensor fault or severe event
+      if (delta > 5) return 'warning';   // uneven contamination
+      if (delta > 3) return 'watch';     // minor discrepancy
+      return 'normal';
+    }
+    function seaStatus(v) {
+      if (v == null) return 'loading';
+      if (v < 14 || v >= 29) return 'critical';
+      if ((v >= 14 && v < 17) || (v >= 20 && v < 29)) return 'warning';
+      return 'normal';
+    }
+    function statusColor(s) {
+      return s === 'critical' ? '#c0392b' : s === 'warning' ? '#c77a00' : s === 'watch' ? '#c77a00' : s === 'normal' ? '#3b6d11' : '#888';
+    }
+    function statusLabel(s) {
+      return s === 'critical' ? 'Alarm' : s === 'warning' ? 'Warning' : s === 'watch' ? 'Watch' : s === 'normal' ? 'Normal' : '—';
+    }
+
+    // ── Pool selection ────────────────────────────────────────────────────────
+    function selectPool(poolName, btn) {
+      selectedPool = poolName;
+      document.querySelectorAll('.pool-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshWaterTab();
+    }
+
+    // Align two time series by index from the end, compute |outside - inside|
+    function computeDelta(poolOut, poolIn) {
+      const n = Math.min(poolOut.length, poolIn.length);
+      const out = poolOut.slice(poolOut.length - n);
+      const ins = poolIn.slice(poolIn.length - n);
+      return out.map((r, i) => ({
+        timestamp: r.timestamp,
+        value: Math.abs(r.value - ins[i].value),
+      }));
+    }
+
+    // ── Fetch from Supabase ──────────────────────────────────────────────────
+    async function fetchWaterData() {
+      const LIMIT = 50;
+      const [outRes, inRes, seaRes] = await Promise.all([
+        sb.from('pool_readings')
+          .select('timestamp, value')
+          .eq('location', selectedPool).eq('sensor', 'outside').eq('type', 'light_intensity')
+          .order('timestamp', { ascending: false }).limit(LIMIT),
+        sb.from('pool_readings')
+          .select('timestamp, value')
+          .eq('location', selectedPool).eq('sensor', 'inside').eq('type', 'light_intensity')
+          .order('timestamp', { ascending: false }).limit(LIMIT),
+        sb.from('weather_readings')
+          .select('timestamp, value')
+          .eq('location', 'Paphos Coast').eq('type', 'sea_temperature')
+          .order('timestamp', { ascending: false }).limit(LIMIT),
+      ]);
+      return {
+        poolOut: (outRes.data || []).reverse(),
+        poolIn:  (inRes.data  || []).reverse(),
+        seaData: (seaRes.data || []).reverse(),
+      };
+    }
+
+    // ── Update sensor cards ──────────────────────────────────────────────────
+    function updateSensorCard(cardId, dotId, labelId, valId, value, unit, statusFn, labelText) {
+      const s = statusFn(value);
+      const card = document.getElementById(cardId);
+      card.className = 'sensor-card' + (s === 'critical' ? ' status-critical' : s === 'warning' ? ' status-warning' : '');
+      document.getElementById(dotId).className = 'status-dot ' + (s === 'loading' ? 'loading' : s);
+      document.getElementById(labelId).textContent = labelText + ' · ' + statusLabel(s);
+      document.getElementById(labelId).style.color = statusColor(s);
+      const v = value != null ? value.toFixed(1) + unit : '—' + unit;
+      document.getElementById(valId).innerHTML = value != null
+        ? `<span style="color:${statusColor(s)}">${value.toFixed(1)}</span><span class="sensor-unit"> ${unit}</span>`
+        : `—<span class="sensor-unit"> ${unit}</span>`;
+    }
+
+    // ── Risk banner ──────────────────────────────────────────────────────────
+    // Primary signal: inside/outside delta. Sea temp is secondary.
+    function updateRiskBanner(delta, latestOut, latestIn, latestSea) {
+      const banner  = document.getElementById('water-risk-banner');
+      const icon    = document.getElementById('water-risk-icon');
+      const label   = document.getElementById('water-risk-label');
+      const detail  = document.getElementById('water-risk-detail');
+
+      const ds = deltaStatus(delta);
+      const ss = seaStatus(latestSea);
+      const order = { critical: 3, warning: 2, watch: 1, normal: 0, loading: -1 };
+      const worst = order[ds] >= order[ss] ? ds : ss;
+
+      banner.className = 'risk-banner';
+      const issues = [];
+
+      // Pool analysis based on delta
+      if (delta != null) {
+        if (ds === 'critical') {
+          issues.push(`Pool gap ${delta.toFixed(1)}% — likely sensor fault or severe event`);
+        } else if (ds === 'warning') {
+          const higher = latestOut > latestIn ? 'outside' : 'inside';
+          issues.push(`Pool gap ${delta.toFixed(1)}% — uneven contamination (${higher} higher)`);
+        } else if (ds === 'watch') {
+          issues.push(`Pool gap ${delta.toFixed(1)}% — minor discrepancy, monitoring`);
+        }
+      }
+      if (ss === 'critical') issues.push(`Sea temp out of range (${latestSea?.toFixed(1)}°C)`);
+      else if (ss === 'warning') issues.push(`Sea temp advisory (${latestSea?.toFixed(1)}°C)`);
+
+      if (worst === 'critical') {
+        banner.classList.add('risk-danger');
+        icon.textContent = '🚨';
+        label.style.color = '#c0392b';
+        label.textContent = 'ALARM';
+        detail.textContent = issues.join(' · ') || 'Critical sensor discrepancy detected';
+      } else if (worst === 'warning') {
+        banner.classList.add('risk-alert');
+        icon.textContent = '⚠️';
+        label.style.color = '#c77a00';
+        label.textContent = 'ALERT';
+        detail.textContent = issues.join(' · ') || 'Sensor discrepancy above warning threshold';
+      } else if (worst === 'watch') {
+        banner.classList.add('risk-alert');
+        icon.textContent = '👁';
+        label.style.color = '#c77a00';
+        label.textContent = 'WATCH';
+        detail.textContent = issues.join(' · ') || 'Minor discrepancy — keep monitoring';
+      } else {
+        banner.classList.add('risk-clear');
+        icon.textContent = '✅';
+        label.style.color = '#3b6d11';
+        label.textContent = 'ALL CLEAR';
+        detail.textContent = 'Sensors agree — no discrepancy detected';
+      }
+    }
+
+    // ── Overview spark line (shows delta over time) ──────────────────────────
+    function updateOverviewSpark(deltaData) {
+      if (!deltaData.length) return;
+      const vals = deltaData.map(r => r.value);
+      const min = 0;
+      const max = Math.max(...vals, 10);  // always show scale up to at least 10
+      const w = 240, h = 60, pad = 4;
+      const xs = vals.map((_, i) => (i / (vals.length - 1 || 1)) * w);
+      const ys = vals.map(v => pad + (1 - (v - min) / (max - min)) * (h - pad * 2));
+      const pts = xs.map((x, i) => `${x},${ys[i]}`).join(' ');
+      const fill = pts + ` ${w},${h} 0,${h}`;
+      // Threshold line at Δ=5 (warning)
+      const warnY = pad + (1 - 5 / max) * (h - pad * 2);
+      document.getElementById('overview-water-spark').innerHTML = `
+        <polyline points="${fill}" fill="#a855f7" opacity="0.1"/>
+        <polyline points="${pts}" fill="none" stroke="#a855f7" stroke-width="2"/>
+        <line x1="0" y1="${warnY}" x2="${w}" y2="${warnY}" stroke="#f97316" stroke-width="0.8" stroke-dasharray="3,3"/>
+        <line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="#e0e0e0" stroke-width="0.5"/>
+      `;
+    }
+
+    // ── Charts ───────────────────────────────────────────────────────────────
+    const CHART_DEFAULTS = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, maxTicksLimit: 8, color: '#aaa' },
+          grid: { color: '#f0f0f0' },
+        },
+        y: {
+          ticks: { font: { size: 10 }, color: '#aaa' },
+          grid: { color: '#f0f0f0' },
+        },
+      },
+    };
+
+    function renderPoolChart(poolOut, poolIn) {
+      const labels = (poolOut.length ? poolOut : poolIn).map(r => fmtHHMM(r.timestamp));
+      const n = labels.length;
+
+      if (poolChart) poolChart.destroy();
+      poolChart = new Chart(document.getElementById('chart-pool').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Outside',
+              data: poolOut.map(r => r.value),
+              borderColor: '#378add', backgroundColor: 'rgba(55,138,221,0.08)',
+              borderWidth: 2, pointRadius: 2, fill: true, tension: 0.35,
+            },
+            {
+              label: 'Inside',
+              data: poolIn.map(r => r.value),
+              borderColor: '#22c55e', backgroundColor: 'transparent',
+              borderWidth: 2, pointRadius: 2, fill: false, tension: 0.35,
+            },
+          ],
+        },
+        options: {
+          ...CHART_DEFAULTS,
+          scales: {
+            ...CHART_DEFAULTS.scales,
+            y: {
+              ...CHART_DEFAULTS.scales.y,
+              title: { display: true, text: 'Light Intensity (%)', font: { size: 10 }, color: '#888' },
+            },
+          },
+        },
+      });
+    }
+
+    function renderSeaChart(seaData) {
+      const labels = seaData.map(r => fmtHHMM(r.timestamp));
+      const n = labels.length;
+
+      if (seaChart) seaChart.destroy();
+      seaChart = new Chart(document.getElementById('chart-sea').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Sea Temperature',
+              data: seaData.map(r => r.value),
+              borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)',
+              borderWidth: 2, pointRadius: 2, fill: true, tension: 0.35,
+            },
+            {
+              label: 'Jellyfish risk',
+              data: Array(n).fill(20),
+              borderColor: '#f97316', borderWidth: 1, borderDash: [5, 4],
+              pointRadius: 0, fill: false,
+            },
+            {
+              label: 'Bacterial risk',
+              data: Array(n).fill(26),
+              borderColor: '#ef4444', borderWidth: 1, borderDash: [5, 4],
+              pointRadius: 0, fill: false,
+            },
+          ],
+        },
+        options: {
+          ...CHART_DEFAULTS,
+          scales: {
+            ...CHART_DEFAULTS.scales,
+            y: {
+              ...CHART_DEFAULTS.scales.y,
+              title: { display: true, text: 'Temperature (°C)', font: { size: 10 }, color: '#888' },
+            },
+          },
+        },
+      });
+    }
+
+    // ── Delta chart ───────────────────────────────────────────────────────────
+    let deltaChart = null;
+    function renderDeltaChart(deltaData) {
+      const n = deltaData.length;
+      if (deltaChart) deltaChart.destroy();
+      deltaChart = new Chart(document.getElementById('chart-delta').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: deltaData.map(r => fmtHHMM(r.timestamp)),
+          datasets: [
+            {
+              label: 'Gap (Δ%)',
+              data: deltaData.map(r => r.value),
+              borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)',
+              borderWidth: 2, pointRadius: 2, fill: true, tension: 0.35,
+            },
+            {
+              label: 'Watch',
+              data: Array(n).fill(3),
+              borderColor: '#f97316', borderWidth: 1, borderDash: [5, 4],
+              pointRadius: 0, fill: false,
+            },
+            {
+              label: 'Alarm',
+              data: Array(n).fill(5),
+              borderColor: '#ef4444', borderWidth: 1, borderDash: [5, 4],
+              pointRadius: 0, fill: false,
+            },
+          ],
+        },
+        options: {
+          ...CHART_DEFAULTS,
+          scales: {
+            ...CHART_DEFAULTS.scales,
+            y: {
+              ...CHART_DEFAULTS.scales.y,
+              min: 0,
+              title: { display: true, text: 'Gap Δ (%)', font: { size: 10 }, color: '#888' },
+            },
+          },
+        },
+      });
+    }
+
+    // ── Main refresh ─────────────────────────────────────────────────────────
+    async function refreshWaterTab() {
+      document.getElementById('water-last-refresh').textContent = 'Refreshing…';
+      try {
+        const { poolOut, poolIn, seaData } = await fetchWaterData();
+
+        const latestOut = poolOut.length ? poolOut[poolOut.length - 1].value : null;
+        const latestIn  = poolIn.length  ? poolIn[poolIn.length - 1].value  : null;
+        const latestSea = seaData.length ? seaData[seaData.length - 1].value : null;
+
+        // Compute delta series and latest delta
+        const deltaData  = computeDelta(poolOut, poolIn);
+        const latestDelta = deltaData.length ? deltaData[deltaData.length - 1].value : null;
+
+        // Update dynamic labels for selected pool
+        document.getElementById('name-pool-out').textContent = selectedPool + ' · Outside';
+        document.getElementById('name-pool-in').textContent  = selectedPool + ' · Inside';
+        document.getElementById('chart-pool-title').textContent = selectedPool + ' — Light Intensity';
+        document.getElementById('chart-pool-subtitle').textContent = selectedPool + ' · Inside & Outside overlaid · Last 50 readings';
+        document.getElementById('chart-delta-title').textContent = selectedPool + ' — Inside / Outside Discrepancy (Δ)';
+        document.getElementById('chart-delta-subtitle').textContent = selectedPool + ' · |Outside − Inside| · gap > 5% = uneven contamination or sensor fault';
+
+        // Outside & inside cards: raw values only, no status judgment
+        document.getElementById('card-pool-out').className = 'sensor-card';
+        document.getElementById('dot-pool-out').className  = 'status-dot normal';
+        document.getElementById('label-pool-out').textContent = 'Outside · raw reading';
+        document.getElementById('label-pool-out').style.color = '#888';
+        document.getElementById('val-pool-out').innerHTML = latestOut != null
+          ? `${latestOut.toFixed(1)}<span class="sensor-unit"> %</span>`
+          : `—<span class="sensor-unit"> %</span>`;
+
+        document.getElementById('card-pool-in').className = 'sensor-card';
+        document.getElementById('dot-pool-in').className  = 'status-dot normal';
+        document.getElementById('label-pool-in').textContent = 'Inside · raw reading';
+        document.getElementById('label-pool-in').style.color = '#888';
+        document.getElementById('val-pool-in').innerHTML = latestIn != null
+          ? `${latestIn.toFixed(1)}<span class="sensor-unit"> %</span>`
+          : `—<span class="sensor-unit"> %</span>`;
+        updateSensorCard('card-sea',      'dot-sea',      'label-sea',      'val-sea',      latestSea, '°C', seaStatus, 'Sea Temperature');
+
+        // Delta card — primary pool signal
+        const ds = deltaStatus(latestDelta);
+        const deltaCard = document.getElementById('card-delta');
+        deltaCard.className = 'sensor-card' + (ds === 'critical' ? ' status-critical' : (ds === 'warning' || ds === 'watch') ? ' status-warning' : '');
+        document.getElementById('dot-delta').className = 'status-dot ' + (ds === 'loading' ? 'loading' : ds === 'watch' ? 'warning' : ds);
+        document.getElementById('label-delta').textContent = 'Discrepancy · ' + statusLabel(ds);
+        document.getElementById('label-delta').style.color = statusColor(ds);
+        document.getElementById('val-delta').innerHTML = latestDelta != null
+          ? `<span style="color:${statusColor(ds)}">${latestDelta.toFixed(1)}</span><span class="sensor-unit"> Δ%</span>`
+          : `—<span class="sensor-unit"> Δ%</span>`;
+
+        // Risk banner — driven by delta
+        updateRiskBanner(latestDelta, latestOut, latestIn, latestSea);
+
+        // Overview widget — shows delta for selected pool
+        document.getElementById('overview-pool-label').textContent = selectedPool;
+        document.getElementById('overview-water-val').textContent = latestDelta != null ? 'Δ ' + latestDelta.toFixed(1) + '%' : '—';
+        const ovStatus = document.getElementById('overview-water-status');
+        ovStatus.textContent = statusLabel(ds);
+        ovStatus.style.color = statusColor(ds);
+        document.getElementById('overview-sea-val').textContent = latestSea != null ? latestSea.toFixed(1) + '°C' : '—';
+        updateOverviewSpark(deltaData);
+
+        // Charts
+        renderPoolChart(poolOut, poolIn);
+        renderSeaChart(seaData);
+        renderDeltaChart(deltaData);
+
+        document.getElementById('water-last-refresh').textContent = 'Updated ' + fmtNow();
+      } catch (err) {
+        console.error('Water fetch error:', err);
+        document.getElementById('water-risk-banner').className = 'risk-banner risk-pending';
+        document.getElementById('water-risk-icon').textContent = '❌';
+        document.getElementById('water-risk-label').textContent = 'ERROR';
+        document.getElementById('water-risk-detail').textContent = err.message;
+        document.getElementById('water-last-refresh').textContent = 'Failed ' + fmtNow();
+      }
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+      initSupabase();
+      refreshWaterTab();
+      setInterval(refreshWaterTab, 60000);
+    });
   </script>
 </body>
 </html>
