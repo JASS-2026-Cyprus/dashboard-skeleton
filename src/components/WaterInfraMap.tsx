@@ -201,6 +201,7 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
               <text
                 x={sl.x + 8} y={sl.y + 12}
                 fontSize={10} fill="#888" fontFamily="system-ui,sans-serif"
+                stroke="white" strokeWidth={3} style={{ paintOrder: 'stroke fill' }}
               >
                 {s.name}
               </text>
@@ -216,21 +217,33 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
           const pipeSensors = sensorsByComponent[pipe.id] ?? [];
           const midX = (from.x + to.x) / 2;
           const midY = (from.y + to.y) / 2;
+          // Perpendicular offset for a gentle curve
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const curve = Math.min(len * 0.15, 24);
+          const cpX = midX - (dy / len) * curve;
+          const cpY = midY + (dx / len) * curve;
           return (
             <g key={pipe.id}>
-              <line
-                x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                stroke="#ccc" strokeWidth={2}
+              <path
+                d={`M${from.x},${from.y} Q${cpX},${cpY} ${to.x},${to.y}`}
+                stroke="#ccc" strokeWidth={2} fill="none"
                 markerEnd="url(#wi-arrow)"
               />
-              {pipeSensors.map((sen, idx) => (
-                <rect
-                  key={sen.id}
-                  x={midX - 5 + idx * 13} y={midY - 5}
-                  width={10} height={10} rx={2}
-                  fill={sensorBadgeColor(severityMap[sen.id])}
-                />
-              ))}
+              {pipeSensors.map((sen, idx) => {
+                // Midpoint of quadratic bezier at t=0.5
+                const bx = 0.25 * from.x + 0.5 * cpX + 0.25 * to.x;
+                const by = 0.25 * from.y + 0.5 * cpY + 0.25 * to.y;
+                return (
+                  <rect
+                    key={sen.id}
+                    x={bx - 5 + idx * 13} y={by - 5}
+                    width={10} height={10} rx={2}
+                    fill={sensorBadgeColor(severityMap[sen.id])}
+                  />
+                );
+              })}
             </g>
           );
         })}
@@ -255,6 +268,7 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
                 x={pos.x} y={pos.y + 18}
                 textAnchor="middle"
                 fontSize={8} fill="#555" fontFamily="system-ui,sans-serif"
+                stroke="white" strokeWidth={3} style={{ paintOrder: 'stroke fill' }}
               >
                 {j.name.length > 14 ? j.name.slice(0, 13) + '…' : j.name}
               </text>
