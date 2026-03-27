@@ -26,3 +26,12 @@ services:
     ports:
       - "8000:80"
     restart: unless-stopped
+    depends_on:
+      - go2rtc
+
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    ports:
+      - "1984:1984"
+      - "8554:8554"
+    restart: unless-stopped
