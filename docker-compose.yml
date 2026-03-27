@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  cockpit-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SUBSYSTEMS_CONFIG: |
+          {
+            "subsystems": {
+              "airQuality": {
+                "backendUrl": "${AIR_QUALITY_BACKEND_URL}"
+              },
+              "waterQuality": {
+                "backendUrl": "${WATER_QUALITY_BACKEND_URL}"
+              },
+              "maintenance": {
+                "backendUrl": "${MAINTENANCE_BACKEND_URL}"
+              },
+              "earthquake": {
+                "backendUrl": "${EARTHQUAKE_BACKEND_URL}"
+              }
+            }
+          }
+    ports:
+      - "8000:80"
+    restart: unless-stopped
