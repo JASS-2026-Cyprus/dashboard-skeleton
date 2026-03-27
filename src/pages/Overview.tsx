@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import SystemSummary from '../components/SystemSummary';
 import TeamWidget from '../components/TeamWidget';
-import BarGraph from '../components/BarGraph';
 import LineGraph from '../components/LineGraph';
 import { POOLS, POOL_TO_SENSOR_ID } from '../lib/waterConfig';
 import type { Pool } from '../lib/waterConfig';
@@ -9,7 +8,6 @@ import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
 import { fetchEqEvents, type EqEvent } from '../lib/supabase';
 
-const seismicData = [0.1, 0.2, 0.08, 0.3, 0.1, 0.15, 0.08, 0.25, 0.12];
 const pm25Data = [9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2, 21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4, 24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3];
 
 function WaterOverviewContent({ selectedPool, onPoolChange }: {
