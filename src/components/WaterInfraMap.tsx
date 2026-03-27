@@ -112,13 +112,26 @@ function junctionColor(type: string): string {
   return JUNCTION_COLORS[type?.toLowerCase()] ?? '#6e7681';
 }
 
+const SEVERITY_RANK = { low: 1, medium: 2, high: 3 } as const;
+
 function buildSeverityMap(alerts: InfraAlert[]): Record<string, 'low' | 'medium' | 'high'> {
-  const rank = { low: 1, medium: 2, high: 3 } as const;
   const map: Record<string, 'low' | 'medium' | 'high'> = {};
   for (const a of alerts) {
     const existing = map[a.sensor_id];
-    if (!existing || rank[a.severity] > rank[existing]) {
+    if (!existing || SEVERITY_RANK[a.severity] > SEVERITY_RANK[existing]) {
       map[a.sensor_id] = a.severity;
+    }
+  }
+  return map;
+}
+
+// Component-level severity: highest alert across all sensors on that component
+function buildComponentSeverityMap(alerts: InfraAlert[]): Record<string, 'low' | 'medium' | 'high'> {
+  const map: Record<string, 'low' | 'medium' | 'high'> = {};
+  for (const a of alerts) {
+    const existing = map[a.component_id];
+    if (!existing || SEVERITY_RANK[a.severity] > SEVERITY_RANK[existing]) {
+      map[a.component_id] = a.severity;
     }
   }
   return map;
@@ -126,6 +139,11 @@ function buildSeverityMap(alerts: InfraAlert[]): Record<string, 'low' | 'medium'
 
 function sensorBadgeColor(severity: 'low' | 'medium' | 'high' | undefined): string {
   if (!severity) return '#3fb950';
+  if (severity === 'low') return '#d29922';
+  return '#f85149';
+}
+
+function alertColor(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'low') return '#d29922';
   return '#f85149';
 }
@@ -162,6 +180,7 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
   }, [topology]);
 
   const severityMap = useMemo(() => buildSeverityMap(alerts), [alerts]);
+  const componentSeverityMap = useMemo(() => buildComponentSeverityMap(alerts), [alerts]);
 
   const sensorsByComponent = useMemo(() => {
     const map: Record<string, typeof topology.sensors> = {};
@@ -224,11 +243,14 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
           const curve = Math.min(len * 0.15, 24);
           const cpX = midX - (dy / len) * curve;
           const cpY = midY + (dx / len) * curve;
+          const pipeSev = componentSeverityMap[pipe.id];
           return (
             <g key={pipe.id}>
               <path
                 d={`M${from.x},${from.y} Q${cpX},${cpY} ${to.x},${to.y}`}
-                stroke="#ccc" strokeWidth={2} fill="none"
+                stroke={pipeSev ? alertColor(pipeSev) : '#ccc'}
+                strokeWidth={pipeSev ? 3 : 2}
+                fill="none"
                 markerEnd="url(#wi-arrow)"
               />
               {pipeSensors.map((sen, idx) => {
@@ -254,8 +276,13 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
           if (!pos) return null;
           const color = junctionColor(j.type);
           const juncSensors = sensorsByComponent[j.id] ?? [];
+          const juncSev = componentSeverityMap[j.id];
           return (
             <g key={j.id}>
+              {juncSev && (
+                <circle cx={pos.x} cy={pos.y} r={14} fill="none"
+                  stroke={alertColor(juncSev)} strokeWidth={2.5} opacity={0.8} />
+              )}
               <circle cx={pos.x} cy={pos.y} r={10} fill={color} stroke="white" strokeWidth={1.5} />
               <text
                 x={pos.x} y={pos.y + 1}
