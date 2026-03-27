@@ -1,0 +1,21 @@
+.container {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 12px;
+  margin-bottom: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.label {
+  color: var(--color-text-secondary);
+}
+
+.value {
+  font-weight: 500;
+}
