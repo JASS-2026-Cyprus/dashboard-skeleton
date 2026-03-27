@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Earthquake Monitoring</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root {
+    --bg: #fafafa; --bg2: #ffffff; --border: #e0e0e0;
+    --text: #1a1a1a; --text2: #666666; --white: #ffffff;
+    --red: #e53935; --green: #639922; --yellow: #f5a623; --blue: #378add; --orange: #d18616;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; height:100vh; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    grid-template-rows: 48px 1fr;
+    height: 100vh;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .header {
+    grid-column: 1 / -1;
+    background: var(--white);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 15px; color: var(--text); font-weight: 600; }
+  .header .live { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--green); }
+  .header .live .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .panel { background:var(--bg); padding:14px; overflow-y:auto; }
+  .panel h2 { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; font-weight:600; }
+
+  #map-container { background:var(--bg); position:relative; }
+  #map { height:100%; width:100%; }
+
+  .chart-box { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px; }
+  .chart-box canvas { width:100%!important; height:130px!important; display:block!important; }
+  .chart-box .title { font-size:10px; color:var(--text2); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+
+  .stat { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; }
+  .stat .label { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+  .stat .value { font-size:22px; font-weight:700; color:var(--text); margin-top:2px; }
+  .stat .value.red { color:var(--red); }
+  .stat .value.green { color:var(--green); }
+
+  .event { background:var(--white); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:6px; font-size:12px; }
+  .event .time { color:var(--text2); font-size:10px; }
+  .event .badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9px; font-weight:700; text-transform:uppercase; }
+  .badge.critical { background:var(--red); color:#fff; }
+  .badge.high { background:var(--orange); color:#fff; }
+  .badge.moderate { background:var(--yellow); color:#fff; }
+  .badge.low { background:var(--green); color:#fff; }
+  .badge.earthquake { background:var(--red); color:#fff; }
+
+  .drone-status { display:flex; align-items:center; gap:8px; padding:8px 0; }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  .leaflet-popup-content-wrapper { border-radius:8px!important; }
+  .leaflet-popup-content { font-family:inherit!important; font-size:12px!important; }
+</style>
+</head>
+<body>
+
+<div class="grid">
+  <div class="header">
+    <h1>Earthquake Monitoring</h1>
+    <div style="display:flex;gap:24px;align-items:center;">
+      <span id="status-text" style="font-size:11px;color:var(--text2)">Connecting...</span>
+      <div class="live"><span class="dot"></span>LIVE</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Seismic Sensor</h2>
+    <div class="stat">
+      <div class="label">LSTM Status</div>
+      <div class="value green" id="lstm-status">QUIET</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="stat"><div class="label">Probability</div><div class="value" id="lstm-prob">0%</div></div>
+      <div class="stat"><div class="label">PGA</div><div class="value" id="pga-value">0.000g</div></div>
+    </div>
+    <div class="chart-box"><div class="title">Live Acceleration (X/Y/Z)</div><canvas id="chart-xyz"></canvas></div>
+    <div class="chart-box"><div class="title">Magnitude |a|</div><canvas id="chart-mag"></canvas></div>
+    <div class="chart-box"><div class="title">LSTM Probability</div><canvas id="chart-prob"></canvas></div>
+    <h2 style="margin-top:14px;">Earthquake History</h2>
+    <div id="earthquake-log"></div>
+  </div>
+
+  <div id="map-container"><div id="map"></div></div>
+
+  <div class="panel">
+    <h2>Drone Status</h2>
+    <div class="stat">
+      <div class="label">Drone</div>
+      <div class="drone-status">
+        <span style="font-size:20px" id="drone-icon">&#9992;</span>
+        <span id="drone-status-text" style="color:var(--green)">Standby</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="stat"><div class="label">Damage Zones</div><div class="value" id="damage-count">0</div></div>
+      <div class="stat"><div class="label">Critical</div><div class="value red" id="critical-count">0</div></div>
+    </div>
+    <h2 style="margin-top:14px;">Damage Reports</h2>
+    <div id="drone-log"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const SB_URL = 'https://wfjpiqdbqpiyiypvneio.supabase.co';
+const SB_KEY = 'sb_secret_nw4R5uMbIP1CXqle78603w' + '__SR8hpFr';
+const SB_H = { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY };
+
+async function sbGet(table, params='') {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?order=created_at.desc&limit=20${params}`, {headers:SB_H});
+    return r.ok ? r.json() : [];
+}
+
+// Map
+const map = L.map('map', {zoomControl:false}).setView([34.765,32.425],14);
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'CartoDB',maxZoom:19}).addTo(map);
+
+const markers = {};
+const COLORS = {critical:'#e53935',high:'#d18616',moderate:'#f5a623',low:'#639922'};
+const RADIUS = {critical:60,high:45,moderate:30,low:20};
+
+function addMarker(r) {
+    const id = r.event_id||r.id; if(markers[id]) return;
+    const c = COLORS[r.severity]||'#999';
+    const m = L.circle([r.lat,r.lon],{radius:RADIUS[r.severity]||25,color:c,fillColor:c,fillOpacity:0.3,weight:2}).addTo(map);
+    m.bindPopup(`<b style="color:${c}">${(r.severity||'').toUpperCase()}</b><br>${r.damage_type||'Damage'}<br>${r.building||''}<br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span>`);
+    markers[id]=m;
+}
+
+// Charts
+const cOpts = (extra={})=>({responsive:true,maintainAspectRatio:false,animation:false,elements:{line:{borderWidth:2},point:{radius:0}},scales:{x:{display:false},y:{ticks:{color:'#999',font:{size:9}},grid:{color:'#f0f0f0'},...extra}},plugins:{legend:{display:false}}});
+
+const chartXYZ = new Chart(document.getElementById('chart-xyz'),{type:'line',data:{labels:[],datasets:[
+    {label:'X',data:[],borderColor:'#e53935',borderWidth:2,pointRadius:0,tension:0.3},
+    {label:'Y',data:[],borderColor:'#639922',borderWidth:2,pointRadius:0,tension:0.3},
+    {label:'Z',data:[],borderColor:'#378add',borderWidth:2,pointRadius:0,tension:0.3},
+]},options:{...cOpts(),plugins:{legend:{display:true,labels:{color:'#666',font:{size:9},boxWidth:12}}}}});
+
+const chartMag = new Chart(document.getElementById('chart-mag'),{type:'line',data:{labels:[],datasets:[
+    {data:[],borderColor:'#f5a623',borderWidth:2,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(245,166,35,0.08)'},
+]},options:cOpts()});
+
+const chartProb = new Chart(document.getElementById('chart-prob'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:[],borderWidth:0}]},options:cOpts({min:0,max:1,ticks:{callback:v=>(v*100)+'%',color:'#999',font:{size:9}}})});
+
+let droneData=[], sensorConnected=false;
+
+async function fetchLive() {
+    try {
+        const rows = await sbGet('sensor_stream','&limit=1');
+        if(!rows.length){sensorConnected=false;return;}
+        let d = typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
+        if(!d||!d.x||!d.x.length){sensorConnected=false;return;}
+        sensorConnected=true;
+
+        const labels=d.x.map((_,i)=>i);
+        chartXYZ.data.labels=labels;
+        chartXYZ.data.datasets[0].data=d.x;
+        chartXYZ.data.datasets[1].data=d.y||[];
+        chartXYZ.data.datasets[2].data=d.z||[];
+        chartXYZ.update();
+
+        chartMag.data.labels=labels;
+        chartMag.data.datasets[0].data=d.mag||[];
+        chartMag.update();
+
+        if(d.prob_history&&d.prob_history.length){
+            chartProb.data.labels=d.prob_history.map((_,i)=>i);
+            chartProb.data.datasets[0].data=d.prob_history;
+            chartProb.data.datasets[0].backgroundColor=d.prob_history.map(p=>p>0.5?'#e53935':'#639922');
+            chartProb.update();
+        }
+
+        const prob=d.prob||0, pga=d.pga||0, isEq=d.label==='EARTHQUAKE';
+        document.getElementById('lstm-status').textContent=isEq?'EARTHQUAKE':'QUIET';
+        document.getElementById('lstm-status').className='value '+(isEq?'red':'green');
+        document.getElementById('lstm-prob').textContent=(prob*100).toFixed(1)+'%';
+        document.getElementById('lstm-prob').style.color=isEq?'var(--red)':'var(--green)';
+        document.getElementById('pga-value').textContent=pga.toFixed(3)+'g';
+        document.getElementById('pga-value').style.color=pga>0.1?'var(--red)':'var(--text)';
+    } catch(e){sensorConnected=false;}
+}
+
+async function fetchHistory() {
+    const rows = await sbGet('sensor_events');
+    if(!rows.length) return;
+    document.getElementById('earthquake-log').innerHTML=rows.slice(0,10).map(r=>{
+        const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
+        return `<div class="event"><span class="badge earthquake">EQ</span> P=${((r.probability||0)*100).toFixed(0)}% PGA=${(r.pga_g||0).toFixed(3)}g<div class="time">${t}</div></div>`;
+    }).join('');
+}
+
+async function fetchDrone() {
+    const rows = await sbGet('drone_reports');
+    if(!rows.length) return;
+    droneData=rows;
+    let total=0,critical=0;
+    for(const r of droneData){addMarker(r);total++;if(r.severity==='critical')critical++;}
+    document.getElementById('damage-count').textContent=total;
+    document.getElementById('critical-count').textContent=critical;
+    if(total>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${total} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
+    document.getElementById('drone-log').innerHTML=droneData.slice(0,15).map(r=>{
+        const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
+        return `<div class="event"><span class="badge ${r.severity||'low'}">${r.severity||'low'}</span> ${r.damage_type||'Damage'} <span style="color:var(--text2)">at ${r.building||'—'}</span><div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div></div>`;
+    }).join('');
+}
+
+function updateStatus(){
+    const now=new Date().toLocaleTimeString();
+    document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} reports | ${now}`;
+}
+
+async function pollFast(){await fetchLive();updateStatus();}
+async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone()]);}
+
+pollFast();pollSlow();
+setInterval(pollFast,2000);
+setInterval(pollSlow,5000);
+</script>
+</body>
+</html>

@@ -1,12 +1,32 @@
+import { useEffect, useState } from 'react';
 import SystemSummary from '../components/SystemSummary';
 import TeamWidget from '../components/TeamWidget';
 import LineGraph from '../components/LineGraph';
 import BarGraph from '../components/BarGraph';
+import { fetchSensorEvents, fetchLiveStream } from '../lib/supabase';
+import type { SensorEvent, LiveData } from '../lib/supabase';
 
 const phData = [6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.3, 7.2, 7.1, 7.0, 6.9, 6.8];
-const seismicData = [0.1, 0.2, 0.08, 0.3, 0.1, 0.15, 0.08, 0.25, 0.12];
 
 export default function Overview() {
+  const [live, setLive] = useState<LiveData | null>(null);
+  const [events, setEvents] = useState<SensorEvent[]>([]);
+
+  useEffect(() => {
+    const poll = async () => {
+      const [l, ev] = await Promise.all([fetchLiveStream(), fetchSensorEvents(9)]);
+      if (l) setLive(l);
+      setEvents(ev);
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isEq = live?.label === 'EARTHQUAKE';
+  const pgaHistory = events.map(e => e.pga_g ?? 0).reverse();
+  const latestPga = live?.pga ?? (events[0]?.pga_g ?? 0);
+
   return (
     <>
       <SystemSummary
@@ -49,14 +69,18 @@ export default function Overview() {
         />
         <TeamWidget
           title="Earthquake"
-          status="Stable"
-          statusColor="green"
-          description="8 ground sensors. Predictive alert system."
+          status={isEq ? 'EARTHQUAKE' : live ? 'Quiet' : 'Offline'}
+          statusColor={isEq ? 'green' : 'green'}
+          description={`LSTM sensor. PGA: ${latestPga.toFixed(3)}g. ${live?.detections ?? 0} detections.`}
           detailsLink="/earthquake"
-          graph={<BarGraph data={seismicData} label="Seismic activity (7d)" currentValue="0.3 M" />}
+          graph={
+            pgaHistory.length > 0
+              ? <BarGraph data={pgaHistory} label="PGA history (recent)" currentValue={`${latestPga.toFixed(3)}g`} />
+              : <BarGraph data={[0.1, 0.2, 0.08]} label="Seismic activity" currentValue="—" />
+          }
           stats={[
-            { label: 'Status', value: 'Stable', success: true },
-            { label: 'Sensors', value: '8 / 8' },
+            { label: 'Status', value: isEq ? 'EARTHQUAKE' : live ? 'Quiet' : 'Offline', success: !isEq },
+            { label: 'Sensor', value: live ? '1 / 1' : '0 / 1' },
           ]}
         />
       </div>
