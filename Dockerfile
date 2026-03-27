@@ -1,9 +1,9 @@
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
 # Receive config.json as build arg
@@ -14,7 +14,7 @@ COPY . .
 RUN npm run build
 
 # ── Stage 2: serve ────────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine
+FROM public.ecr.aws/docker/library/nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
