@@ -14,6 +14,11 @@ export default defineConfig({
           Authorization: `Bearer ${process.env.VITE_VLM_API_KEY || ''}`,
         },
       },
+      '/api/drone': {
+        target: process.env.VITE_DRONE_API_URL || 'http://192.168.1.109:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/drone/, ''),
+      },
     },
   },
 })

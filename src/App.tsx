@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import Overview from './pages/Overview';
 import MaintenancePage from './pages/MaintenancePage';
 import AirQualityPage from './pages/AirQualityPage';
-import WaterPage from './pages/WaterPage';
+// import WaterPage from './pages/WaterPage';
 import EarthquakePage from './pages/EarthquakePage';
 
 export default function App() {
@@ -16,7 +16,7 @@ export default function App() {
             <Route path="/" element={<Overview />} />
             <Route path="/maintenance" element={<MaintenancePage />} />
             <Route path="/air-quality" element={<AirQualityPage />} />
-            <Route path="/water" element={<WaterPage />} />
+            {/* <Route path="/water" element={<WaterPage />} /> */}
             <Route path="/earthquake" element={<EarthquakePage />} />
           </Routes>
         </main>
