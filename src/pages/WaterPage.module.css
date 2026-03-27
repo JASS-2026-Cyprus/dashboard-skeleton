@@ -1,0 +1,358 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pageHeader {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* View toggle */
+.viewToggle {
+  display: flex;
+  gap: 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 3px;
+}
+
+.viewBtn {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.viewBtnActive {
+  background: white;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Map placeholder */
+.mapPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 400px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.mapPlaceholder span {
+  font-size: 48px;
+}
+
+/* Pool selector */
+.poolSelector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.poolBtn {
+  padding: 7px 18px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  background: white;
+  color: var(--color-text-secondary);
+  transition: all 0.15s;
+}
+
+.poolBtn:hover {
+  border-color: var(--color-blue);
+  color: var(--color-blue-text);
+}
+
+.poolBtnActive {
+  background: var(--color-blue-bg);
+  border-color: var(--color-blue);
+  color: var(--color-blue-text);
+  font-weight: 500;
+}
+
+/* Refresh bar */
+.refreshBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+}
+
+.refreshTime {
+  flex: 1;
+}
+
+.statusDots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.dot:first-child {
+  margin-left: 0;
+}
+
+.refreshBtn {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  background: white;
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.refreshBtn:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* Error banner */
+.errorBanner {
+  padding: 0.5rem 0.75rem;
+  background: #fff0f0;
+  border: 1px solid #fbb;
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  color: #c0392b;
+}
+
+/* Risk banner */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.banner > span {
+  font-size: 20px;
+}
+
+.banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bannerDetail {
+  font-size: 12px;
+  font-weight: 400;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.bannerClear {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.bannerWarn {
+  background: #fff8ec;
+  color: #c77a00;
+}
+
+.bannerDanger {
+  background: #fff0f0;
+  color: #c0392b;
+}
+
+/* Sensor cards */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sensorCard {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 0.9rem 1rem;
+}
+
+.cardLabel {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.cardValue {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.cardUnit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+/* Charts */
+.chartSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .chartSection {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.chartCardWide {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.chartTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.chartSubtitle {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/* Agent feed */
+.feedCard {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.feedHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.feedEmpty {
+  font-size: 13px;
+  color: #aaa;
+  padding: 0.25rem 0;
+  margin: 0;
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.feedEntry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badgeCritical {
+  background: #ffd5d5;
+  color: #c0392b;
+}
+
+.badgeWarning {
+  background: #fff3cc;
+  color: #c77a00;
+}
+
+.badgeMaintenance {
+  background: #dceeff;
+  color: #185fa5;
+}
+
+.badgeInit {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+.feedContent {
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.feedTime {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-right: 4px;
+}
+
+.feedPool {
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-left: 4px;
+}
