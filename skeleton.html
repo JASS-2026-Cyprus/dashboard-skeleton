@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cockpit Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fafafa;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+    .container {
+      display: flex;
+      gap: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .sidebar {
+      flex-shrink: 0;
+      width: 180px;
+    }
+    .sidebar h1 {
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .sidebar p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .nav-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .nav-item.active {
+      background: #e6f1fb;
+      color: #185fa5;
+      font-weight: 500;
+    }
+    .nav-item:not(.active) {
+      color: #666;
+    }
+    .nav-item:not(.active):hover {
+      background: #f1f1f1;
+    }
+    .nav-divider {
+      border-top: 0.5px solid #e0e0e0;
+      margin: 8px 0;
+    }
+    .main {
+      flex: 1;
+      min-width: 0;
+    }
+    .card {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+    .badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .badge.success {
+      background: #eaf3de;
+      color: #3b6d11;
+    }
+    .summary-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      font-size: 14px;
+    }
+    .summary-item span:first-child {
+      font-weight: 500;
+    }
+    .summary-item span:last-child {
+      color: #666;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .widget {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .widget-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot.blue { background: #85b7eb; }
+    .dot.green { background: #97c459; }
+    .widget-title h3 {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .details-btn {
+      font-size: 12px;
+      padding: 4px 8px;
+      background: transparent;
+      border: 0.5px solid #d0d0d0;
+      border-radius: 8px;
+      color: #666;
+      cursor: pointer;
+    }
+    .details-btn:hover {
+      background: #f5f5f5;
+    }
+    .widget p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    .graph-container {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 1rem;
+    }
+    .graph-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .graph-header span:first-child {
+      color: #666;
+    }
+    .graph-header span:last-child {
+      font-weight: 500;
+    }
+    .stats {
+      border-top: 0.5px solid #e0e0e0;
+      padding-top: 1rem;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+    .stat-row span:first-child {
+      color: #666;
+    }
+    .stat-row span:last-child {
+      font-weight: 500;
+    }
+    .status-success {
+      color: #3b6d11;
+    }
+    .demo-section {
+      background: #f5f5f5;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .demo-section h2 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 0.75rem;
+    }
+    .demo-section p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* Tab views */
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+
+    /* Maintenance tab */
+    .risk-banner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      border: 1px solid;
+    }
+    .risk-banner.risk-pending { background: #f5f5f5; border-color: #d0d0d0; }
+    .risk-banner.risk-clear   { background: #eaf3de; border-color: #7dba41; }
+    .risk-banner.risk-alert   { background: #fef3e2; border-color: #f5a623; }
+    .risk-banner.risk-danger  { background: #fdecea; border-color: #e53935; }
+    .risk-icon { font-size: 1.8rem; }
+    .risk-label { font-size: 1rem; font-weight: 700; margin-bottom: 0.15rem; }
+    .risk-detail { font-size: 0.78rem; color: #666; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+    .stat-card .val { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; }
+    .stat-card .lbl { font-size: 0.72rem; color: #888; margin-top: 0.2rem; }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 0.5px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-subtitle { font-size: 0.72rem; font-weight: 400; color: #888; }
+    .pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.5rem;
+      border-radius: 20px;
+    }
+    .pill-done    { background: #eaf3de; color: #3b6d11; }
+    .pill-running { background: #e6f1fb; color: #185fa5; }
+    .pill-error   { background: #fdecea; color: #c0392b; }
+
+    .yolo-thumb {
+      margin-bottom: 0.75rem;
+    }
+    .yolo-thumb-placeholder {
+      background: #f0f0f0;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 8px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .yolo-thumb .cap { font-size: 0.7rem; color: #888; margin-top: 0.3rem; }
+
+    .class-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.75rem; }
+    .class-table th {
+      text-align: left; padding: 0.35rem 0.5rem; color: #888;
+      border-bottom: 0.5px solid #e0e0e0; font-weight: 600;
+    }
+    .class-table td { padding: 0.3rem 0.5rem; border-bottom: 0.5px solid #e0e0e0; }
+    .class-table tr:last-child td { border-bottom: none; }
+    .bar { height: 6px; border-radius: 3px; display: inline-block; vertical-align: middle; }
+    .cnt { background: #f0f0f0; border-radius: 4px; padding: 0.05rem 0.35rem; font-size: 0.72rem; font-weight: 600; }
+    .yolo-meta { font-size: 0.75rem; color: #888; margin-bottom: 0.5rem; }
+    .yolo-meta strong { color: #1a1a1a; }
+
+    .terminal {
+      background: #1a1a2e;
+      border: 1px solid #2e2e4e;
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', 'Menlo', monospace;
+      font-size: 0.72rem;
+      line-height: 1.65;
+      padding: 0.75rem 1rem;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+    .tline { display: flex; gap: 0.6rem; }
+    .ttime { color: #3a4060; flex-shrink: 0; }
+    .tline.l-start  .tmsg { color: #7080a0; }
+    .tline.l-window .tmsg { color: #c8cde8; }
+    .tline.l-pos    .tmsg { color: #22c55e; font-weight: 600; }
+    .tline.l-neg    .tmsg { color: #3a4060; }
+    .tline.l-done   .tmsg { color: #6366f1; font-weight: 600; }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.75rem;
+    }
+    .task-card {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .task-card.state-detected { border-color: #f5a623; }
+    .task-card.state-clear    { border-color: #7dba41; }
+    .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+    .task-name { font-size: 0.88rem; font-weight: 700; }
+    .badge-det { background: #fef3e2; color: #c77a00; font-size: 0.67rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 20px; }
+    .badge-ok  { background: #eaf3de; color: #3b6d11; font-size: 0.67rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 20px; }
+    .task-stats { font-size: 0.75rem; color: #888; margin-bottom: 0.5rem; }
+    .task-stats span { margin-right: 0.75rem; }
+    .findings { list-style: none; }
+    .findings li { font-size: 0.73rem; color: #1a1a1a; padding: 0.25rem 0; border-top: 0.5px solid #e0e0e0; }
+    .findings li:first-child { border-top: none; }
+    .fts { color: #888; font-family: monospace; font-size: 0.67rem; margin-right: 0.35rem; }
+
+    /* Chart widgets row */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 720px) { .chart-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .chart-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .chart-subtitle {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+
+    /* Pie chart legend */
+    .pie-layout {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .pie-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-label { color: #444; }
+    .legend-pct   { color: #888; margin-left: auto; padding-left: 8px; }
+
+    /* Line chart */
+    .line-axis-label {
+      font-size: 10px;
+      fill: #aaa;
+    }
+    .line-grid-line {
+      stroke: #e8e8e8;
+      stroke-width: 0.5;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.6rem;
+    }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #555;
+    }
+    .legend-line {
+      width: 18px;
+      height: 2px;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h1>Cockpit</h1>
+      <p>Dashboard</p>
+
+      <nav>
+        <div class="nav-item active" onclick="showTab('overview', this)">Overview</div>
+        <div class="nav-divider"></div>
+        <div class="nav-item" onclick="showTab('maintenance', this)">Maintenance</div>
+        <div class="nav-item" onclick="showTab('overview', this)">Air Quality</div>
+        <div class="nav-item" onclick="showTab('overview', this)">Water</div>
+        <div class="nav-item" onclick="showTab('overview', this)">Earthquake</div>
+      </nav>
+    </aside>
+
+    <main class="main">
+
+      <!-- ===================== OVERVIEW TAB ===================== -->
+      <div class="tab-view active" id="tab-overview">
+
+      <div class="card">
+        <div class="card-header">
+          <h2>System summary</h2>
+          <span class="badge success">All nominal</span>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span>Action:</span>
+            <span> Review design skeleton before lunch.</span>
+          </div>
+          <div class="summary-item">
+            <span>Urgency:</span>
+            <span> Low. LLM integration due today.</span>
+          </div>
+          <div class="summary-item">
+            <span>State:</span>
+            <span> 4 teams active. All sensors operational.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:1rem 1.25rem">
+        <div style="display:flex;gap:0.6rem;align-items:flex-end">
+          <textarea
+            id="llm-input"
+            rows="2"
+            placeholder="Ask the city cockpit anything…"
+            style="
+              flex:1;min-width:0;resize:none;
+              font-family:inherit;font-size:14px;color:#1a1a1a;
+              background:#fafafa;border:0.5px solid #d0d0d0;border-radius:8px;
+              padding:0.6rem 0.75rem;line-height:1.5;
+              outline:none;transition:border-color 0.15s;
+            "
+            onfocus="this.style.borderColor='#378add'"
+            onblur="this.style.borderColor='#d0d0d0'"
+          ></textarea>
+          <button
+            onclick="document.getElementById('llm-input').value=''"
+            style="
+              flex-shrink:0;height:38px;padding:0 1rem;
+              background:#378add;color:white;border:none;
+              border-radius:8px;font-size:13px;font-weight:500;
+              cursor:pointer;transition:opacity 0.15s;
+            "
+            onmouseover="this.style.opacity='0.85'"
+            onmouseout="this.style.opacity='1'"
+          >Send</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="widget">
+          <div class="widget-header">
+            <div class="widget-title">
+              <div class="dot blue"></div>
+              <h3>Maintenance</h3>
+            </div>
+          </div>
+          <p>Design skeleton provider. LLM chat summary integration.</p>
+          <div class="stats">
+            <div class="stat-row">
+              <span>Status</span>
+              <span class="status-success">On track</span>
+            </div>
+            <div class="stat-row">
+              <span>Due</span>
+              <span>Before lunch</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header">
+            <div class="widget-title">
+              <div class="dot green"></div>
+              <h3>Air Quality</h3>
+            </div>
+          </div>
+          <p>Deployment support and technical infrastructure.</p>
+          <div class="stats">
+            <div class="stat-row">
+              <span>Status</span>
+              <span class="status-success">Ready</span>
+            </div>
+            <div class="stat-row">
+              <span>Role</span>
+              <span>Deploy support</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header">
+            <div class="widget-title">
+              <div class="dot blue"></div>
+              <h3>Water</h3>
+            </div>
+            <button class="details-btn">Details ↗</button>
+          </div>
+          <p>12 quality sensors. pH and turbidity tracking.</p>
+
+          <div class="graph-container">
+            <div class="graph-header">
+              <span>pH levels (24h)</span>
+              <span>7.2</span>
+            </div>
+            <svg viewBox="0 0 240 60" style="width: 100%; height: 60px;">
+              <polyline points="0,45 20,42 40,38 60,35 80,32 100,30 120,28 140,32 160,35 180,38 200,40 220,42 240,44" fill="none" stroke="#378add" stroke-width="2"/>
+              <polyline points="0,45 20,42 40,38 60,35 80,32 100,30 120,28 140,32 160,35 180,38 200,40 220,42 240,44 240,60 0,60" fill="#378add" opacity="0.1"/>
+              <line x1="0" y1="60" x2="240" y2="60" stroke="#e0e0e0" stroke-width="0.5"/>
+            </svg>
+          </div>
+
+          <div class="stats">
+            <div class="stat-row">
+              <span>Status</span>
+              <span class="status-success">Normal</span>
+            </div>
+            <div class="stat-row">
+              <span>Sensors</span>
+              <span>12 / 12</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header">
+            <div class="widget-title">
+              <div class="dot green"></div>
+              <h3>Earthquake</h3>
+            </div>
+            <button class="details-btn">Details ↗</button>
+          </div>
+          <p>8 ground sensors. Predictive alert system.</p>
+
+          <div class="graph-container">
+            <div class="graph-header">
+              <span>Seismic activity (7d)</span>
+              <span>0.3 M</span>
+            </div>
+            <svg viewBox="0 0 240 60" style="width: 100%; height: 60px;">
+              <line x1="0" y1="55" x2="240" y2="55" stroke="#e0e0e0" stroke-width="0.5"/>
+              <rect x="10" y="52" width="4" height="3" fill="#639922"/>
+              <rect x="35" y="50" width="4" height="5" fill="#639922"/>
+              <rect x="60" y="53" width="4" height="2" fill="#639922"/>
+              <rect x="85" y="48" width="4" height="7" fill="#639922"/>
+              <rect x="110" y="52" width="4" height="3" fill="#639922"/>
+              <rect x="135" y="51" width="4" height="4" fill="#639922"/>
+              <rect x="160" y="53" width="4" height="2" fill="#639922"/>
+              <rect x="185" y="49" width="4" height="6" fill="#639922"/>
+              <rect x="210" y="52" width="4" height="3" fill="#639922"/>
+            </svg>
+          </div>
+
+          <div class="stats">
+            <div class="stat-row">
+              <span>Status</span>
+              <span class="status-success">Stable</span>
+            </div>
+            <div class="stat-row">
+              <span>Sensors</span>
+              <span>8 / 8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Demo scenario</h2>
+        <p>Key features for presentation session.</p>
+      </div>
+
+      </div><!-- /tab-overview -->
+
+      <!-- ===================== MAINTENANCE TAB ===================== -->
+      <div class="tab-view" id="tab-maintenance">
+
+        <!-- Risk banner -->
+        <div class="risk-banner risk-alert">
+          <div class="risk-icon">⚠️</div>
+          <div>
+            <div class="risk-label" style="color:#c77a00">ALERT</div>
+            <div class="risk-detail">Issues detected — inspection recommended</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats-grid" style="margin-bottom:1.5rem">
+          <div class="stat-card">
+            <div class="val">142</div>
+            <div class="lbl">Objects Detected</div>
+          </div>
+          <div class="stat-card">
+            <div class="val">6</div>
+            <div class="lbl">Object Classes</div>
+          </div>
+          <div class="stat-card">
+            <div class="val">2</div>
+            <div class="lbl">VLM Alerts</div>
+          </div>
+          <div class="stat-card">
+            <div class="val">840 ms</div>
+            <div class="lbl">YOLO Inference</div>
+          </div>
+        </div>
+
+        <!-- Chart widgets -->
+        <div class="chart-grid">
+
+          <!-- Pie chart: YOLO class distribution -->
+          <div class="chart-card">
+            <h3>Object Class Distribution</h3>
+            <div class="chart-subtitle">YOLO detections by class · 142 total</div>
+            <div class="pie-layout">
+              <svg viewBox="0 0 200 180" style="width:160px;flex-shrink:0">
+                <!-- waste bag: 40.85% → 147.1° → start -90°, end 57.1° -->
+                <path d="M100,90 L100,10 A80,80 0 0,1 143,157 Z" fill="#6366f1"/>
+                <!-- bottle: 26.76% → 96.3° → start 57.1°, end 153.4° -->
+                <path d="M100,90 L143,157 A80,80 0 0,1 29,126 Z" fill="#22c55e"/>
+                <!-- cardboard: 16.9% → 60.8° → start 153.4°, end 214.2° -->
+                <path d="M100,90 L29,126 A80,80 0 0,1 34,45 Z" fill="#f97316"/>
+                <!-- tire: 9.86% → 35.5° → start 214.2°, end 249.7° -->
+                <path d="M100,90 L34,45 A80,80 0 0,1 72,15 Z" fill="#ef4444"/>
+                <!-- can: 5.63% → 20.3° → start 249.7°, end 270° -->
+                <path d="M100,90 L72,15 A80,80 0 0,1 100,10 Z" fill="#eab308"/>
+                <!-- centre hole (donut) -->
+                <circle cx="100" cy="90" r="42" fill="white"/>
+                <text x="100" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1a1a">142</text>
+                <text x="100" y="100" text-anchor="middle" font-size="9" fill="#888">objects</text>
+              </svg>
+              <div class="pie-legend">
+                <div class="legend-row">
+                  <div class="legend-dot" style="background:#6366f1"></div>
+                  <span class="legend-label">Waste bag</span>
+                  <span class="legend-pct">41%</span>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-dot" style="background:#22c55e"></div>
+                  <span class="legend-label">Bottle</span>
+                  <span class="legend-pct">27%</span>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-dot" style="background:#f97316"></div>
+                  <span class="legend-label">Cardboard</span>
+                  <span class="legend-pct">17%</span>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-dot" style="background:#ef4444"></div>
+                  <span class="legend-label">Tire</span>
+                  <span class="legend-pct">10%</span>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-dot" style="background:#eab308"></div>
+                  <span class="legend-label">Can</span>
+                  <span class="legend-pct">6%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line graph: VLM confidence per window -->
+          <div class="chart-card">
+            <h3>VLM Confidence per Window</h3>
+            <div class="chart-subtitle">Detection confidence across 12 time windows</div>
+            <svg viewBox="0 0 300 110" style="width:100%;display:block">
+              <!-- Y-axis grid lines -->
+              <line class="line-grid-line" x1="32" y1="10" x2="290" y2="10"/>
+              <line class="line-grid-line" x1="32" y1="35" x2="290" y2="35"/>
+              <line class="line-grid-line" x1="32" y1="60" x2="290" y2="60"/>
+              <line class="line-grid-line" x1="32" y1="85" x2="290" y2="85"/>
+              <!-- Y-axis labels -->
+              <text class="line-axis-label" x="26" y="13" text-anchor="end">1.0</text>
+              <text class="line-axis-label" x="26" y="38" text-anchor="end">0.75</text>
+              <text class="line-axis-label" x="26" y="63" text-anchor="end">0.5</text>
+              <text class="line-axis-label" x="26" y="88" text-anchor="end">0.25</text>
+              <!-- X-axis baseline -->
+              <line stroke="#e0e0e0" stroke-width="0.5" x1="32" y1="85" x2="290" y2="85"/>
+              <!-- X-axis window labels -->
+              <text class="line-axis-label" x="34"  y="98" text-anchor="middle">1</text>
+              <text class="line-axis-label" x="57"  y="98" text-anchor="middle">2</text>
+              <text class="line-axis-label" x="80"  y="98" text-anchor="middle">3</text>
+              <text class="line-axis-label" x="103" y="98" text-anchor="middle">4</text>
+              <text class="line-axis-label" x="126" y="98" text-anchor="middle">5</text>
+              <text class="line-axis-label" x="149" y="98" text-anchor="middle">6</text>
+              <text class="line-axis-label" x="172" y="98" text-anchor="middle">7</text>
+              <text class="line-axis-label" x="195" y="98" text-anchor="middle">8</text>
+              <text class="line-axis-label" x="218" y="98" text-anchor="middle">9</text>
+              <text class="line-axis-label" x="241" y="98" text-anchor="middle">10</text>
+              <text class="line-axis-label" x="264" y="98" text-anchor="middle">11</text>
+              <text class="line-axis-label" x="287" y="98" text-anchor="middle">12</text>
+              <!--
+                Y mapping: y = 85 - conf * 75   (0→85, 1→10)
+                X mapping: x = 34 + i * 23      (i=0..11)
+                Waste conf:     [.87,.45,.23,.81,.62,.34,.79,.41,.85,.38,.21,.19]
+                Fire conf:      [.08,.12,.05,.11,.07,.09,.06,.13,.08,.10,.04,.07]
+                Structural conf:[.15,.22,.74,.31,.18,.23,.19,.28,.16,.20,.71,.25]
+              -->
+              <!-- Waste detection line (purple) -->
+              <polyline
+                fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linejoin="round"
+                points="
+                  34,20  57,51  80,68  103,24  126,39  149,59
+                  172,26  195,54  218,21  241,57  264,69  287,71
+                "/>
+              <!-- Structural damage line (orange) -->
+              <polyline
+                fill="none" stroke="#f97316" stroke-width="1.8" stroke-linejoin="round"
+                points="
+                  34,74  57,68  80,30  103,62  126,72  149,68
+                  172,71  195,64  218,73  241,70  264,32  287,66
+                "/>
+              <!-- Fire/smoke line (green, near-flat/low) -->
+              <polyline
+                fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linejoin="round"
+                points="
+                  34,79  57,76  80,81  103,77  126,80  149,78
+                  172,80  195,75  218,79  241,78  264,82  287,80
+                "/>
+              <!-- Alert threshold line at 0.5 -->
+              <line x1="32" y1="48" x2="290" y2="48"
+                    stroke="#ef4444" stroke-width="0.8" stroke-dasharray="4,3"/>
+              <text class="line-axis-label" x="292" y="51" fill="#ef4444">0.5</text>
+            </svg>
+            <div class="chart-legend">
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#6366f1"></div>Waste Detection
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#f97316"></div>Structural Damage
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#22c55e"></div>Fire &amp; Smoke
+              </div>
+              <div class="chart-legend-item">
+                <div class="legend-line" style="background:#ef4444;height:1px;border-top:1px dashed #ef4444;background:none"></div>Alert threshold
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /chart-grid -->
+
+        <!-- YOLO section -->
+        <div class="card">
+          <div class="section-title">
+            Object Detection
+            <span class="section-subtitle">YOLO11s</span>
+            <span class="pill pill-done">done</span>
+          </div>
+          <p class="yolo-meta">Model: <strong>yolo11s</strong> &nbsp;|&nbsp; Inference: <strong>840 ms</strong></p>
+          <div class="yolo-thumb">
+            <div class="yolo-thumb-placeholder">First frame with detections</div>
+            <div class="cap">First frame with detections</div>
+          </div>
+          <table class="class-table">
+            <thead>
+              <tr><th>Class</th><th>Distribution</th><th>Count</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>waste bag</td>
+                <td><span class="bar" style="width:110px;background:#6366f1"></span></td>
+                <td><span class="cnt">58</span></td>
+              </tr>
+              <tr>
+                <td>bottle</td>
+                <td><span class="bar" style="width:72px;background:#22c55e"></span></td>
+                <td><span class="cnt">38</span></td>
+              </tr>
+              <tr>
+                <td>cardboard</td>
+                <td><span class="bar" style="width:45px;background:#f97316"></span></td>
+                <td><span class="cnt">24</span></td>
+              </tr>
+              <tr>
+                <td>tire</td>
+                <td><span class="bar" style="width:26px;background:#ef4444"></span></td>
+                <td><span class="cnt">14</span></td>
+              </tr>
+              <tr>
+                <td>can</td>
+                <td><span class="bar" style="width:15px;background:#eab308"></span></td>
+                <td><span class="cnt">8</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- VLM section -->
+        <div class="card">
+          <div class="section-title">
+            Scene Analysis
+            <span class="section-subtitle">Waste · Fire/Smoke · Structural</span>
+            <span class="pill pill-done">done</span>
+          </div>
+
+          <!-- Terminal log -->
+          <div class="terminal">
+            <div class="tline l-start"><span class="ttime">14:02:01</span><span class="tmsg">Pipeline started — 3 tasks, 12 windows</span></div>
+            <div class="tline l-window"><span class="ttime">14:02:03</span><span class="tmsg">Processing window 1/12 [0.0s–8.0s]</span></div>
+            <div class="tline l-pos"><span class="ttime">14:02:05</span><span class="tmsg">POSITIVE — waste_detection_v1 (conf 0.87)</span></div>
+            <div class="tline l-window"><span class="ttime">14:02:07</span><span class="tmsg">Processing window 2/12 [4.0s–12.0s]</span></div>
+            <div class="tline l-neg"><span class="ttime">14:02:09</span><span class="tmsg">negative — fire_smoke_v1</span></div>
+            <div class="tline l-window"><span class="ttime">14:02:11</span><span class="tmsg">Processing window 3/12 [8.0s–16.0s]</span></div>
+            <div class="tline l-pos"><span class="ttime">14:02:13</span><span class="tmsg">POSITIVE — structural_crack_v1 (conf 0.74)</span></div>
+            <div class="tline l-done"><span class="ttime">14:02:31</span><span class="tmsg">Pipeline complete — 12/12 windows processed</span></div>
+          </div>
+
+          <!-- VLM task cards -->
+          <div class="task-grid">
+            <div class="task-card state-detected">
+              <div class="task-header">
+                <div class="task-name">🗑 Waste Detection</div>
+                <span class="badge-det">DETECTED</span>
+              </div>
+              <div class="task-stats">
+                <span>Windows: 4/12</span><span>Confidence: 0.85</span>
+              </div>
+              <ul class="findings">
+                <li><span class="fts">1.2s, 5.6s</span>Multiple waste bags and loose litter visible on pavement</li>
+                <li><span class="fts">9.0s</span>Overflowing bin near intersection</li>
+              </ul>
+            </div>
+
+            <div class="task-card state-clear">
+              <div class="task-header">
+                <div class="task-name">🔥 Fire &amp; Smoke</div>
+                <span class="badge-ok">CLEAR</span>
+              </div>
+              <div class="task-stats">
+                <span>Windows: 0/12</span><span>Confidence: 0.12</span>
+              </div>
+              <ul class="findings">
+                <li style="color:#888;font-style:italic">No noteworthy findings.</li>
+              </ul>
+            </div>
+
+            <div class="task-card state-detected">
+              <div class="task-header">
+                <div class="task-name">🏚 Structural Damage</div>
+                <span class="badge-det">DETECTED</span>
+              </div>
+              <div class="task-stats">
+                <span>Windows: 2/12</span><span>Confidence: 0.74</span>
+              </div>
+              <ul class="findings">
+                <li><span class="fts">8.0s, 12.4s</span>Crack visible on south-facing wall facade</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-maintenance -->
+
+    </main>
+  </div>
+  <script>
+    function showTab(tabId, navEl) {
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      navEl.classList.add('active');
+    }
+  </script>
+</body>
+</html>
