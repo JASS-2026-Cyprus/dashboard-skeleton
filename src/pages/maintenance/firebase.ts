@@ -51,6 +51,9 @@ export function subscribeReports(callback: (reports: Report[]) => void) {
   });
 }
 
-export async function updateReportStatus(reportId: string, status: string) {
+export async function updateReportStatus(
+  reportId: string,
+  status: Report['status'],
+) {
   await updateDoc(doc(db, 'reports', reportId), { status });
 }
