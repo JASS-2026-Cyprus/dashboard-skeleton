@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,6 +49,15 @@ export default function WaterInfraTab() {
   const { topology, alerts, openEvents, throughput, loading, error, refresh, lastRefresh } =
     useWaterInfraData();
 
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const toggleExpand = (id: number) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <div className={styles.tab}>
       {/* Refresh bar */}
@@ -70,26 +80,32 @@ export default function WaterInfraTab() {
         <div className={styles.chartSubtitle}>
           Estimated litres delivered per hour across all inlets
         </div>
-        <div style={{ height: 200 }}>
-          <Line
-            data={{
-              labels: throughput.map((r) => fmtHour(r.hour)),
-              datasets: [
-                {
-                  label: 'Litres/h',
-                  data: throughput.map((r) => r.total_liters),
-                  borderColor: '#378add',
-                  backgroundColor: 'rgba(55,138,221,0.1)',
-                  borderWidth: 2,
-                  pointRadius: 2,
-                  fill: true,
-                  tension: 0.35,
-                },
-              ],
-            }}
-            options={CHART_OPTS}
-          />
-        </div>
+        {!loading && throughput.length === 0 ? (
+          <p className={styles.emptyMsg} style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0 }}>
+            No throughput data for the past 24 h
+          </p>
+        ) : (
+          <div style={{ height: 200 }}>
+            <Line
+              data={{
+                labels: throughput.map((r) => fmtHour(r.hour)),
+                datasets: [
+                  {
+                    label: 'Litres/h',
+                    data: throughput.map((r) => r.total_liters ?? 0),
+                    borderColor: '#378add',
+                    backgroundColor: 'rgba(55,138,221,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    fill: true,
+                    tension: 0.35,
+                  },
+                ],
+              }}
+              options={CHART_OPTS}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom row: events + map */}
@@ -104,20 +120,33 @@ export default function WaterInfraTab() {
             <p className={styles.emptyMsg}>{loading ? '…' : 'No open events'}</p>
           ) : (
             <div className={styles.eventsList}>
-              {openEvents.map((ev) => (
-                <div key={ev.id} className={styles.eventItem}>
-                  <div className={styles.eventHeader}>
-                    <span className={`${styles.badge} ${badgeClass(ev.severity)}`}>
-                      {ev.severity ?? 'open'}
-                    </span>
-                    <span className={styles.eventTitle}>{ev.title}</span>
+              {openEvents.map((ev) => {
+                const expanded = expandedIds.has(ev.id);
+                return (
+                  <div key={ev.id} className={styles.eventItem}>
+                    <div className={styles.eventHeader}>
+                      <span className={`${styles.badge} ${badgeClass(ev.severity)}`}>
+                        {ev.severity ?? 'open'}
+                      </span>
+                      <span className={styles.eventTitle}>{ev.title}</span>
+                    </div>
+                    <div className={styles.eventComponent}>{ev.component_id}</div>
+                    {ev.details && (
+                      <>
+                        <div className={expanded ? styles.eventDetailsExpanded : styles.eventDetails}>
+                          {ev.details}
+                        </div>
+                        <button
+                          className={styles.expandBtn}
+                          onClick={() => toggleExpand(ev.id)}
+                        >
+                          {expanded ? 'Show less ▲' : 'Show more ▼'}
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <div className={styles.eventComponent}>{ev.component_id}</div>
-                  {ev.details && (
-                    <div className={styles.eventDetails}>{ev.details}</div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
