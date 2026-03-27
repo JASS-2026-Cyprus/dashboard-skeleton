@@ -255,10 +255,12 @@ export default function WaterPage() {
 
       {/* Map view */}
       {view === 'map' && (
-        <div className={styles.mapPlaceholder}>
-          <span>🗺️</span>
-          <p>Map view coming soon</p>
-        </div>
+        <iframe
+          src="http://192.168.1.166:2223"
+          className={styles.mapFrame}
+          style={{ width: '100%', height: 'calc(100vh - 80px)', border: 'none' }}
+          title="Water Monitoring Map"
+        />
       )}
 
       {/* Pools view */}
