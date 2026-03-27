@@ -1,5 +1,5 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://wfjpiqdbqpiyiypvneio.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmanBpcWRicXBpeWl5cHZuZWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzQ2NTcsImV4cCI6MjA5MDAxMDY1N30.7bTE1uUs1vISrO9he7vbDjz3pIAZ53XCVeBi-5rh520';
 
 const headers = {
   apikey: SUPABASE_KEY,

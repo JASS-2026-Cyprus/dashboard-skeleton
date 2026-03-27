@@ -109,6 +109,11 @@
         <span id="drone-status-text" style="color:var(--green)">Standby</span>
       </div>
     </div>
+    <button id="launch-drone-btn" onclick="launchDrone()" style="
+      width:100%;padding:12px;margin-bottom:10px;
+      background:#e53935;color:#fff;border:none;border-radius:8px;
+      font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.5px;
+    ">LAUNCH DRONE</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div class="stat"><div class="label">Damage Zones</div><div class="value" id="damage-count">0</div></div>
       <div class="stat"><div class="label">Critical</div><div class="value red" id="critical-count">0</div></div>
@@ -122,7 +127,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const SB_URL = 'https://wfjpiqdbqpiyiypvneio.supabase.co';
-const SB_KEY = 'sb_secret_nw4R5uMbIP1CXqle78603w' + '__SR8hpFr';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmanBpcWRicXBpeWl5cHZuZWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzQ2NTcsImV4cCI6MjA5MDAxMDY1N30.7bTE1uUs1vISrO9he7vbDjz3pIAZ53XCVeBi-5rh520';
 const SB_H = { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY };
 
 async function sbGet(table, params='') {
@@ -229,12 +234,27 @@ function updateStatus(){
     document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} reports | ${now}`;
 }
 
+async function launchDrone(){
+    const btn=document.getElementById('launch-drone-btn');
+    btn.textContent='LAUNCHING...';btn.style.opacity='0.5';btn.disabled=true;
+    try{
+        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://localhost:5050';
+        const r=await fetch(url+'/pipeline/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
+        if(r.ok){btn.textContent='DRONE LAUNCHED';btn.style.background='#639922';
+            document.getElementById('drone-status-text').textContent='Scanning...';
+            document.getElementById('drone-status-text').style.color='#f5a623';
+            document.getElementById('drone-icon').textContent='✈';
+        }else{btn.textContent='FAILED — RETRY';btn.style.background='#f5a623';}
+    }catch(e){btn.textContent='OFFLINE — RETRY';btn.style.background='#f5a623';}
+    setTimeout(()=>{btn.textContent='LAUNCH DRONE';btn.style.background='#e53935';btn.style.opacity='1';btn.disabled=false;},5000);
+}
+
 async function pollFast(){await fetchLive();updateStatus();}
 async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone()]);}
 
 pollFast();pollSlow();
-setInterval(pollFast,2000);
-setInterval(pollSlow,5000);
+setInterval(()=>pollFast().catch(()=>{}),700);
+setInterval(()=>pollSlow().catch(()=>{}),5000);
 </script>
 </body>
 </html>
