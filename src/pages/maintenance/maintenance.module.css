@@ -1,0 +1,861 @@
+/* ── Tab navigation ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+  border-bottom: 0.5px solid var(--color-border);
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabActive {
+  color: var(--color-blue-text);
+  border-bottom-color: var(--color-blue);
+}
+
+/* ── Section cards ── */
+.card {
+  background: var(--color-bg-primary);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.cardText {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/* ── Drop zone ── */
+.dropZone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 1rem;
+}
+
+.dropZone:hover,
+.dropZoneDragOver {
+  border-color: var(--color-blue);
+  background: var(--color-blue-bg);
+}
+
+.dropIcon {
+  font-size: 28px;
+  margin-bottom: 0.5rem;
+}
+
+.dropLabel {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.dropHint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 0.25rem;
+}
+
+.selectedFile {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* ── Buttons ── */
+.btn {
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 0.5px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background 0.2s;
+}
+
+.btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: var(--color-blue);
+  color: white;
+  border-color: var(--color-blue);
+}
+
+.btnPrimary:hover {
+  background: #2d78c5;
+}
+
+.btnPrimary:disabled {
+  background: var(--color-blue);
+}
+
+/* ── Job card ── */
+.jobCard {
+  background: var(--color-bg-primary);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.jobName {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.jobRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+}
+
+.badgeRunning {
+  background: var(--color-blue-bg);
+  color: var(--color-blue-text);
+}
+
+.badgeDone {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.badgeError {
+  background: #fde8e8;
+  color: #c53030;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Terminal ── */
+.terminal {
+  background: #0f172a;
+  border-radius: var(--border-radius-sm);
+  padding: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.tline {
+  display: flex;
+  gap: 8px;
+}
+
+.ttime {
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.tmsg {
+  color: #94a3b8;
+}
+
+.lStart .tmsg { color: #64748b; }
+.lWindow .tmsg { color: #e2e8f0; }
+.lPos .tmsg { color: #4ade80; }
+.lNeg .tmsg { color: #475569; }
+.lWarn .tmsg { color: #fbbf24; }
+.lError .tmsg { color: #f87171; }
+.lDone .tmsg { color: #34d399; font-weight: 500; }
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #94a3b8;
+  animation: blink 1s step-end infinite;
+  margin-left: 4px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ── Task cards (VLM results) ── */
+.taskGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.taskCard {
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  background: var(--color-bg-primary);
+}
+
+.taskCardDetected {
+  border-left: 3px solid #f97316;
+}
+
+.taskCardClear {
+  border-left: 3px solid var(--color-green);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.taskName {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.badgeDet {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.badgeOk {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.taskStats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.findings {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.findings li {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding: 4px 0;
+  border-top: 0.5px solid var(--color-border);
+}
+
+.fts {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-right: 6px;
+}
+
+/* ── Risk banner ── */
+.riskBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
+}
+
+.riskPending { background: var(--color-blue-bg); }
+.riskClear { background: var(--color-green-bg); }
+.riskAlert { background: #fff7ed; }
+.riskDanger { background: #fde8e8; }
+
+.riskIcon { font-size: 24px; }
+
+.riskLabel {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.riskDetail {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* ── Confidence chart ── */
+.chartWrap {
+  margin-bottom: 1rem;
+}
+
+.chartWrap svg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--border-radius-sm);
+}
+
+/* ── Reports ── */
+.filtersRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.filterSelect {
+  padding: 6px 10px;
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.reportCard {
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.reportCard:hover {
+  border-color: var(--color-blue);
+}
+
+.reportCardActive {
+  border-color: var(--color-blue);
+  background: var(--color-blue-bg);
+}
+
+.rcTop {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.catBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.sevBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.sevHigh { background: #fde8e8; color: #c53030; }
+.sevMed { background: #fff7ed; color: #c2410c; }
+.sevLow { background: var(--color-green-bg); color: var(--color-green-text); }
+
+.reportName {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.reportPath {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.rcFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reportTime {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* ── Report detail ── */
+.detailPanel {
+  background: var(--color-bg-primary);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.rdBadges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.rdTitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.rdMeta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.rdDesc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+}
+
+.rdPhoto {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 1rem;
+}
+
+/* ── Room map ── */
+.roomMapWrap {
+  margin-bottom: 1rem;
+}
+
+.roomMapTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.roomMapDims {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.roomMapContainer {
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.roomMapContainer svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.roomMapCoords {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 6px;
+}
+
+.wpInfo {
+  font-size: 13px;
+  color: var(--color-blue-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+/* ── Drone mission ── */
+.missionPanel {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.missionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.missionTitle {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.missionTime {
+  font-size: 13px;
+  font-family: 'SF Mono', monospace;
+  color: var(--color-text-secondary);
+}
+
+.missionStep {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--color-border);
+  align-items: flex-start;
+}
+
+.missionStep:last-child {
+  border-bottom: none;
+}
+
+.msIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+.msBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.msLabel {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.msSub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.msProgress {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.msBar {
+  height: 100%;
+  background: var(--color-blue);
+  border-radius: 2px;
+  transition: width linear;
+}
+
+.msCheck {
+  flex-shrink: 0;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.stepDone {
+  opacity: 0.6;
+}
+
+/* ── Inline notification bar ── */
+.notifBar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.notifItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--color-blue-bg);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notifDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  flex-shrink: 0;
+}
+
+.notifText {
+  flex: 1;
+  color: var(--color-blue-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notifClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-blue-text);
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.notifClose:hover {
+  opacity: 1;
+}
+
+/* ── Dashboard ── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.statVal {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.statLbl {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.statWarn .statVal { color: #c2410c; }
+.statGood .statVal { color: var(--color-green-text); }
+.statDanger .statVal { color: #c53030; }
+
+.dashGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dashSection {
+  background: var(--color-bg-primary);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.dashSectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.barLabel {
+  width: 90px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.barTrack {
+  flex: 1;
+  height: 8px;
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.barVal {
+  width: 30px;
+  text-align: right;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--color-border);
+  font-size: 13px;
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.actText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actTime {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.catDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.catRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.catName {
+  flex: 1;
+}
+
+.catCnt {
+  color: var(--color-text-secondary);
+}
+
+.sidebarStat {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 0.5px solid var(--color-border);
+}
+
+.sidebarStat:last-child {
+  border-bottom: none;
+}
+
+.sidebarStatVal {
+  font-weight: 600;
+}
+
+.pieSvg {
+  display: block;
+  margin: 0 auto 0.5rem;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 1rem;
+}
+
+/* ── Layout: side-by-side for reports ── */
+.splitLayout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 800px) {
+  .splitLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reportsList {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* ── Upload area in drone prompt ── */
+.droneUploadArea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.droneFileBtn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-bg-primary);
+  border: 0.5px solid var(--color-border);
+  cursor: pointer;
+}
+
+.droneFileName {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
