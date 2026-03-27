@@ -118,9 +118,20 @@ async function extractFrames(
 
       for (const t of times) {
         try {
-          video.currentTime = t;
-          await new Promise<void>((res) => {
-            video.onseeked = () => res();
+          await new Promise<void>((res, rej) => {
+            const onSeeked = () => {
+              video.removeEventListener('seeked', onSeeked);
+              video.removeEventListener('error', onError);
+              res();
+            };
+            const onError = () => {
+              video.removeEventListener('seeked', onSeeked);
+              video.removeEventListener('error', onError);
+              rej(new Error('Failed to seek video'));
+            };
+            video.addEventListener('seeked', onSeeked);
+            video.addEventListener('error', onError);
+            video.currentTime = t;
           });
           ctx.drawImage(video, 0, 0, w, h);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
