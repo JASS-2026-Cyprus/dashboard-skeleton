@@ -3,8 +3,8 @@ FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN npm install
 
 # Receive config.json as build arg
 ARG SUBSYSTEMS_CONFIG='{"subsystems":{}}'
