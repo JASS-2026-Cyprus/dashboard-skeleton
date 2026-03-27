@@ -9,6 +9,7 @@ import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
 
 const seismicData = [0.1, 0.2, 0.08, 0.3, 0.1, 0.15, 0.08, 0.25, 0.12];
+const pm25Data = [9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2, 21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4, 24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3];
 
 function WaterOverviewContent({ selectedPool, onPoolChange }: {
   selectedPool: Pool;
@@ -95,12 +96,14 @@ export default function Overview() {
         />
         <TeamWidget
           title="Air Quality"
-          status="Ready"
+          status="Good"
           statusColor="green"
-          description="Deployment support and technical infrastructure."
+          description="5 pollutants monitored. PM2.5, NO₂, CO and more."
+          detailsLink="/air-quality"
+          graph={<LineGraph data={pm25Data} label="PM2.5 (24h)" currentValue="10.3 µg/m³" color="#378add" />}
           stats={[
-            { label: 'Status', value: 'Ready', success: true },
-            { label: 'Role', value: 'Deploy support' },
+            { label: 'Status', value: 'Good', success: true },
+            { label: 'Active events', value: '2' },
           ]}
         />
         <TeamWidget
