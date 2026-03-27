@@ -30,12 +30,12 @@ function niceTicks(max: number, count = 5): number[] {
   return Array.from({ length: count }, (_, i) => +(i * step).toFixed(3));
 }
 
-const X_TICKS = [
-  { idx: 0,  label: '00:00' },
-  { idx: 6,  label: '06:00' },
-  { idx: 12, label: '12:00' },
-  { idx: 18, label: '18:00' },
-  { idx: 23, label: 'now' },
+const X_TICK_FRACTIONS = [
+  { frac: 0,    label: 'start' },
+  { frac: 0.25, label: '25%' },
+  { frac: 0.5,  label: '50%' },
+  { frac: 0.75, label: '75%' },
+  { frac: 1,    label: 'now' },
 ];
 
 export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
@@ -136,9 +136,8 @@ export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
           <line x1={0} y1={CH} x2={CW} y2={CH} stroke="var(--color-border)" strokeWidth="0.5" />
 
           {/* X-axis ticks */}
-          {X_TICKS.map(({ idx, label }) => {
-            const n = series[0]?.data.length ?? 24;
-            const x = toX(idx, n);
+          {X_TICK_FRACTIONS.map(({ frac, label }) => {
+            const x = frac * CW;
             return (
               <g key={label}>
                 <line x1={x} y1={CH} x2={x} y2={CH + 4} stroke="var(--color-border)" strokeWidth="0.5" />

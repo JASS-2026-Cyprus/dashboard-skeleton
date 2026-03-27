@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Sidebar from './components/Sidebar';
 import Overview from './pages/Overview';
 import MaintenancePage from './pages/MaintenancePage';
@@ -6,8 +7,11 @@ import AirQualityPage from './pages/AirQualityPage';
 import WaterPage from './pages/WaterPage';
 import EarthquakePage from './pages/EarthquakePage';
 
+const queryClient = new QueryClient();
+
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <div className="layout">
         <Sidebar />
@@ -22,5 +26,6 @@ export default function App() {
         </main>
       </div>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
