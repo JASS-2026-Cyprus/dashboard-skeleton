@@ -1,11 +1,12 @@
 import styles from './MultiLineGraph.module.css';
 
-interface Series {
+export interface Series {
   data: number[];
   label: string;
   unit: string;
   color: string;
   currentValue: string;
+  yAxisId: 'left' | 'right';
 }
 
 interface MultiLineGraphProps {
@@ -14,16 +15,21 @@ interface MultiLineGraphProps {
 }
 
 // Layout
-const VW = 420;
-const VH = 140;
-const M = { top: 8, right: 12, bottom: 24, left: 34 };
-const CW = VW - M.left - M.right; // chart area width
-const CH = VH - M.top - M.bottom; // chart area height
+const VW = 440;
+const VH = 150;
+const M = { top: 10, right: 44, bottom: 24, left: 38 };
+const CW = VW - M.left - M.right;
+const CH = VH - M.top - M.bottom;
 
-// Horizontal grid at 25 / 50 / 75 %
-const Y_GRID = [0.25, 0.5, 0.75];
+// Compute nice round ticks for an axis
+function niceTicks(max: number, count = 5): number[] {
+  if (max === 0) return Array.from({ length: count }, (_, i) => i);
+  const raw = max / (count - 1);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = Math.ceil(raw / magnitude) * magnitude;
+  return Array.from({ length: count }, (_, i) => +(i * step).toFixed(3));
+}
 
-// X ticks for 24 hourly points
 const X_TICKS = [
   { idx: 0,  label: '00:00' },
   { idx: 6,  label: '06:00' },
@@ -33,9 +39,26 @@ const X_TICKS = [
 ];
 
 export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
+  const leftSeries  = series.filter((s) => s.yAxisId === 'left');
+  const rightSeries = series.filter((s) => s.yAxisId === 'right');
+
+  const leftMax  = Math.max(...leftSeries.flatMap((s) => s.data), 0);
+  const rightMax = Math.max(...rightSeries.flatMap((s) => s.data), 0);
+
+  const leftTicks  = niceTicks(leftMax);
+  const rightTicks = niceTicks(rightMax);
+
+  const leftAxisMax  = leftTicks[leftTicks.length - 1]  || 1;
+  const rightAxisMax = rightTicks[rightTicks.length - 1] || 1;
+
+  const toY = (value: number, axisMax: number) =>
+    CH - (value / axisMax) * CH;
+
+  const toX = (i: number, n: number) => (i / (n - 1)) * CW;
+
   return (
     <div className={styles.container}>
-      {/* Legend header */}
+      {/* Legend */}
       <div className={styles.header}>
         <span className={styles.title}>{title}</span>
         <div className={styles.legend}>
@@ -49,36 +72,73 @@ export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', height: '160px' }}>
+      <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', height: '170px' }}>
         <g transform={`translate(${M.left},${M.top})`}>
 
-          {/* Horizontal grid lines */}
-          {Y_GRID.map((pct) => {
-            const y = CH * (1 - pct);
+          {/* Grid lines + left axis ticks */}
+          {leftTicks.map((tick) => {
+            const y = toY(tick, leftAxisMax);
             return (
-              <g key={pct}>
+              <g key={tick}>
                 <line
                   x1={0} y1={y} x2={CW} y2={y}
                   stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="3 3"
                 />
                 <text
-                  x={-4} y={y + 3.5}
+                  x={-5} y={y + 3.5}
                   textAnchor="end" fontSize="8" fill="var(--color-text-secondary)"
                   fontFamily="inherit"
                 >
-                  {Math.round(pct * 100)}%
+                  {tick % 1 === 0 ? tick : tick.toFixed(1)}
                 </text>
               </g>
             );
           })}
 
+          {/* Left axis label */}
+          {leftSeries.length > 0 && (
+            <text
+              x={-28} y={CH / 2}
+              textAnchor="middle" fontSize="7.5" fill="var(--color-text-secondary)"
+              fontFamily="inherit"
+              transform={`rotate(-90, -28, ${CH / 2})`}
+            >
+              µg/m³
+            </text>
+          )}
+
+          {/* Right axis ticks + label */}
+          {rightSeries.length > 0 && rightTicks.map((tick) => {
+            const y = toY(tick, rightAxisMax);
+            return (
+              <text
+                key={tick}
+                x={CW + 5} y={y + 3.5}
+                textAnchor="start" fontSize="8" fill={rightSeries[0].color}
+                fontFamily="inherit" opacity="0.8"
+              >
+                {tick % 1 === 0 ? tick : tick.toFixed(2)}
+              </text>
+            );
+          })}
+          {rightSeries.length > 0 && (
+            <text
+              x={CW + 38} y={CH / 2}
+              textAnchor="middle" fontSize="7.5" fill={rightSeries[0].color}
+              fontFamily="inherit" opacity="0.8"
+              transform={`rotate(90, ${CW + 38}, ${CH / 2})`}
+            >
+              mg/m³
+            </text>
+          )}
+
           {/* Baseline */}
           <line x1={0} y1={CH} x2={CW} y2={CH} stroke="var(--color-border)" strokeWidth="0.5" />
 
-          {/* X-axis ticks & labels */}
+          {/* X-axis ticks */}
           {X_TICKS.map(({ idx, label }) => {
             const n = series[0]?.data.length ?? 24;
-            const x = (idx / (n - 1)) * CW;
+            const x = toX(idx, n);
             return (
               <g key={label}>
                 <line x1={x} y1={CH} x2={x} y2={CH + 4} stroke="var(--color-border)" strokeWidth="0.5" />
@@ -95,17 +155,19 @@ export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
 
           {/* Lines */}
           {series.map((s) => {
-            const max = Math.max(...s.data);
-            const min = Math.min(...s.data);
-            const range = max - min || 1;
+            const axisMax = s.yAxisId === 'left' ? leftAxisMax : rightAxisMax;
             const n = s.data.length;
-
             const points = s.data
-              .map((v, i) => `${(i / (n - 1)) * CW},${CH - ((v - min) / range) * CH}`)
+              .map((v, i) => `${toX(i, n)},${toY(v, axisMax)}`)
               .join(' ');
-
             return (
-              <polyline key={s.label} points={points} fill="none" stroke={s.color} strokeWidth="1.5" />
+              <polyline
+                key={s.label}
+                points={points}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="1.5"
+              />
             );
           })}
 

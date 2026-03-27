@@ -379,11 +379,11 @@ export default function AirQualityPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Sensor Readings (24h)</h2>
         <MultiLineGraph
-          title="Normalised to individual ranges"
+          title="Sensor Readings"
           series={[
-            { data: pm25History, label: 'PM2.5', unit: 'µg/m³', color: '#0284c7', currentValue: `${latest.pm25} µg/m³` },
-            { data: no2History,  label: 'NO₂',   unit: 'µg/m³', color: '#d97706', currentValue: `${latest.no2} µg/m³` },
-            { data: coHistory,   label: 'CO',     unit: 'mg/m³', color: '#c2410c', currentValue: `${latest.co.toFixed(2)} mg/m³` },
+            { data: pm25History, label: 'PM2.5', unit: 'µg/m³', color: '#0284c7', currentValue: `${latest.pm25} µg/m³`,          yAxisId: 'left' },
+            { data: no2History,  label: 'NO₂',   unit: 'µg/m³', color: '#d97706', currentValue: `${latest.no2} µg/m³`,           yAxisId: 'left' },
+            { data: coHistory,   label: 'CO',     unit: 'mg/m³', color: '#c2410c', currentValue: `${latest.co.toFixed(2)} mg/m³`, yAxisId: 'right' },
           ]}
         />
       </div>
@@ -434,21 +434,16 @@ export default function AirQualityPage() {
       </div>
 
       {/* ── Agent Insights ── */}
-
       <div className={styles.section}>
         <div className={styles.sectionTitleRow}>
           <h2 className={styles.sectionTitle} style={{ marginBottom: 0 }}>Agent Insights</h2>
-          <button
-            className={styles.toggleButton}
-            onClick={() => setInsightsOpen((v) => !v)}
-          >
+          <button className={styles.toggleButton} onClick={() => setInsightsOpen((v) => !v)}>
             {insightsOpen ? '▲ Hide' : '▼ Show'}
           </button>
         </div>
 
         {insightsOpen && (
           <div className={styles.insightsContent}>
-            {/* Anomaly hypothesis */}
             <div className={styles.insightCard}>
               <h3 className={styles.sectionTitle}>Anomaly Hypothesis</h3>
               <p className={styles.sectionText}>
@@ -465,7 +460,6 @@ export default function AirQualityPage() {
               </div>
             </div>
 
-            {/* 30-min forecast */}
             <div className={styles.insightCard}>
               <h3 className={styles.sectionTitle}>30-min Forecast</h3>
               <div className={styles.configRow}>

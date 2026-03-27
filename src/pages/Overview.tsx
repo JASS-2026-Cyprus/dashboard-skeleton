@@ -77,13 +77,13 @@ export default function Overview() {
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <SystemSummary
         action="Monitor pool clarity delta. Water agent is active."
         urgency="Routine monitoring. No immediate service disruptions forecasted."
         state="4 teams active. All sensors operational."
       />
-      <div className="grid">
+      <div className="grid" style={{ flex: 1, minHeight: 0 }}>
         <TeamWidget
           title="Maintenance"
           status="On track"
@@ -105,7 +105,23 @@ export default function Overview() {
             { label: 'Status', value: 'Good', success: true },
             { label: 'Active events', value: '2' },
           ]}
-        />
+        >
+          <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: '0.5rem' }}>Anomaly Hypothesis</div>
+            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+              Elevated PM10 and NO₂ correlate with active construction in Zone 1 (university expansion).
+              Pattern consistent with diesel machinery and earthworks dust.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 0', borderBottom: '0.5px solid var(--color-border)' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>Risk level</span>
+              <span style={{ fontWeight: 500, color: '#b8860b' }}>Medium</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 0' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>Confidence</span>
+              <span style={{ fontWeight: 500 }}>87%</span>
+            </div>
+          </div>
+        </TeamWidget>
         <TeamWidget
           title="Water"
           status={waterStatus}
@@ -137,6 +153,6 @@ export default function Overview() {
           ]}
         />
       </div>
-    </>
+    </div>
   );
 }
