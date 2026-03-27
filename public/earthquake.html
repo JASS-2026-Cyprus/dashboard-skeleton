@@ -109,10 +109,10 @@
         <span id="drone-status-text" style="color:var(--green)">Standby</span>
       </div>
     </div>
-    <button id="launch-drone-btn" onclick="launchDrone()" style="
+    <button id="launch-drone-btn" onclick="launchDrone()" disabled style="
       width:100%;padding:12px;margin-bottom:10px;
-      background:#e53935;color:#fff;border:none;border-radius:8px;
-      font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.5px;
+      background:#555;color:#999;border:none;border-radius:8px;
+      font-size:14px;font-weight:700;cursor:not-allowed;letter-spacing:0.5px;
     ">LAUNCH DRONE</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div class="stat"><div class="label">Damage Zones</div><div class="value" id="damage-count">0</div></div>
@@ -202,6 +202,17 @@ async function fetchLive() {
         document.getElementById('lstm-prob').style.color=isEq?'var(--red)':'var(--green)';
         document.getElementById('pga-value').textContent=pga.toFixed(3)+'g';
         document.getElementById('pga-value').style.color=pga>0.1?'var(--red)':'var(--text)';
+
+        if(isEq&&!window._droneActive){
+            window._droneActive=true;
+            const btn=document.getElementById('launch-drone-btn');
+            btn.disabled=false;btn.style.background='#e53935';btn.style.color='#fff';btn.style.cursor='pointer';
+            clearTimeout(window._droneTimer);
+            window._droneTimer=setTimeout(()=>{
+                btn.disabled=true;btn.style.background='#555';btn.style.color='#999';btn.style.cursor='not-allowed';
+                window._droneActive=false;
+            },20000);
+        }
     } catch(e){sensorConnected=false;}
 }
 
@@ -212,6 +223,21 @@ async function fetchHistory() {
         const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
         return `<div class="event"><span class="badge earthquake">EQ</span> P=${((r.probability||0)*100).toFixed(0)}% PGA=${(r.pga_g||0).toFixed(3)}g<div class="time">${t}</div></div>`;
     }).join('');
+
+    // Activate drone button if newest earthquake is < 20 sec old
+    const newest = rows[0];
+    const ageSec = (Date.now() - new Date(newest.created_at).getTime()) / 1000;
+    if(ageSec < 20 && !window._droneActive){
+        window._droneActive=true;
+        const btn=document.getElementById('launch-drone-btn');
+        btn.disabled=false;btn.style.background='#e53935';btn.style.color='#fff';btn.style.cursor='pointer';
+        clearTimeout(window._droneTimer);
+        const remaining = Math.max(1000, (20 - ageSec) * 1000);
+        window._droneTimer=setTimeout(()=>{
+            btn.disabled=true;btn.style.background='#555';btn.style.color='#999';btn.style.cursor='not-allowed';
+            window._droneActive=false;
+        }, remaining);
+    }
 }
 
 async function fetchDrone() {
