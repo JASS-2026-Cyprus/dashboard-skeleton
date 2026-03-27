@@ -86,11 +86,11 @@ async function fetchTopology(): Promise<WaterInfraTopology> {
   const wi = supabase.schema('water_infra');
 
   const [spacesRes, junctionsRes, juncSpacesRes, pipesRes, sensorsRes] = await Promise.all([
-    wi.table('spaces').select('id,name,type,floor'),
-    wi.table('junctions').select('id,name,type'),
-    wi.table('junction_spaces').select('junction_id,space_id'),
-    wi.table('pipe_segments').select('id,from_junction,to_junction'),
-    wi.table('sensors').select('id,type,unit,attached_to,attached_to_kind'),
+    wi.from('spaces').select('id,name,type,floor'),
+    wi.from('junctions').select('id,name,type'),
+    wi.from('junction_spaces').select('junction_id,space_id'),
+    wi.from('pipe_segments').select('id,from_junction,to_junction'),
+    wi.from('sensors').select('id,type,unit,attached_to,attached_to_kind'),
   ]);
 
   if (spacesRes.error) throw new Error(spacesRes.error.message);
@@ -104,7 +104,7 @@ async function fetchTopology(): Promise<WaterInfraTopology> {
     (juncSpaceMap[row.junction_id] = juncSpaceMap[row.junction_id] || []).push(row.space_id);
   }
 
-  const junctions: Junction[] = (junctionsRes.data ?? []).map((j) => ({
+  const junctions: Junction[] = (junctionsRes.data ?? []).map((j: { id: string; name: string; type: string }) => ({
     ...j,
     space_ids: juncSpaceMap[j.id] ?? [],
   }));
@@ -120,7 +120,7 @@ async function fetchTopology(): Promise<WaterInfraTopology> {
 async function fetchAlerts(): Promise<InfraAlert[]> {
   const { data, error } = await supabase
     .schema('water_infra')
-    .table('alerts')
+    .from('alerts')
     .select('id,sensor_id,component_id,severity')
     .eq('acknowledged', false);
   if (error) throw new Error(error.message);
@@ -130,7 +130,7 @@ async function fetchAlerts(): Promise<InfraAlert[]> {
 async function fetchOpenEvents(): Promise<AgentEvent[]> {
   const { data, error } = await supabase
     .schema('water_infra')
-    .table('agent_events')
+    .from('agent_events')
     .select('id,title,status,severity,component_id,details,created_at,updated_at')
     .eq('status', 'open')
     .order('created_at', { ascending: false });
