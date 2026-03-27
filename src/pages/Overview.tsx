@@ -64,8 +64,8 @@ export default function Overview() {
   const { latestDelta, latestSea } = useWaterData(selectedPool);
   const { alertFeed } = useAgentAlerts();
 
-  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const topAlert = alertFeed.find((e) => e.sensor_id === sensorId);
+  const sensorId = POOL_TO_SENSOR_ID[selectedPool] ?? null;
+  const topAlert = sensorId ? alertFeed.find((e) => e.sensor_id === sensorId) : undefined;
 
   let waterStatus = 'Normal';
   let waterSuccess = true;

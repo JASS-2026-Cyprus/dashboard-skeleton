@@ -132,7 +132,19 @@ function DeltaChart({ deltaData }: { deltaData: Reading[] }) {
 
 function RiskBanner({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
   const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const top = entries.find((e) => e.sensor_id === sensorId);
+  const top = sensorId ? entries.find((e) => e.sensor_id === sensorId) : undefined;
+
+  if (!sensorId) {
+    return (
+      <div className={`${styles.banner} ${styles.bannerClear}`}>
+        <span>ℹ️</span>
+        <div>
+          <strong>NOT MONITORED</strong>
+          <span className={styles.bannerDetail}>{selectedPool} has no swarm agent sensor — data shown from Supabase only</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!top) {
     return (
@@ -167,8 +179,8 @@ const ACTION_LABEL: Record<string, string> = {
 
 function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
   const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const poolEntries = entries.filter((e) => e.sensor_id === sensorId);
-  const otherEntries = entries.filter((e) => e.sensor_id !== sensorId);
+  const poolEntries = sensorId ? entries.filter((e) => e.sensor_id === sensorId) : [];
+  const otherEntries = sensorId ? entries.filter((e) => e.sensor_id !== sensorId) : entries;
   const display = [...poolEntries, ...otherEntries].slice(0, 15);
 
   if (!display.length) {
@@ -187,7 +199,7 @@ function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedP
           ? styles.badgeInit
           : styles.badgeWarning;
         const badgeText = isCritical ? 'critical' : (ACTION_LABEL[e.action] ?? e.action);
-        const isOtherPool = e.sensor_id !== sensorId;
+        const isOtherPool = !sensorId || e.sensor_id !== sensorId;
         return (
           <div key={i} className={styles.feedEntry}>
             <span className={`${styles.badge} ${badgeClass}`}>{badgeText}</span>
