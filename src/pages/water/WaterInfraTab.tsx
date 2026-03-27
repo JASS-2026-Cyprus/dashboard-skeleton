@@ -220,7 +220,7 @@ export default function WaterInfraTab() {
             </div>
           </div>
           {topology ? (
-            <WaterInfraMap topology={topology} alerts={alerts} />
+            <WaterInfraMap topology={topology} alerts={alerts} openEvents={openEvents} />
           ) : (
             <p className={styles.emptyMsg}>{loading ? 'Loading map…' : 'No topology data'}</p>
           )}

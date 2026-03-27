@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { WaterInfraTopology, InfraAlert } from '../hooks/useWaterInfraData';
+import type { WaterInfraTopology, InfraAlert, AgentEvent } from '../hooks/useWaterInfraData';
 import styles from './WaterInfraMap.module.css';
 
 // ── Layout constants (same as operator webapp) ────────────────────────────────
@@ -125,15 +125,25 @@ function buildSeverityMap(alerts: InfraAlert[]): Record<string, 'low' | 'medium'
   return map;
 }
 
-// Component-level severity: highest alert across all sensors on that component
-function buildComponentSeverityMap(alerts: InfraAlert[]): Record<string, 'low' | 'medium' | 'high'> {
+// Component-level severity: highest across unacknowledged alerts AND open agent events
+function buildComponentSeverityMap(
+  alerts: InfraAlert[],
+  openEvents: AgentEvent[],
+): Record<string, 'low' | 'medium' | 'high'> {
   const map: Record<string, 'low' | 'medium' | 'high'> = {};
-  for (const a of alerts) {
-    const existing = map[a.component_id];
-    if (!existing || SEVERITY_RANK[a.severity] > SEVERITY_RANK[existing]) {
-      map[a.component_id] = a.severity;
+
+  const apply = (componentId: string, severity: string | null) => {
+    const sev = (severity ?? 'low') as 'low' | 'medium' | 'high';
+    if (!SEVERITY_RANK[sev]) return;
+    const existing = map[componentId];
+    if (!existing || SEVERITY_RANK[sev] > SEVERITY_RANK[existing]) {
+      map[componentId] = sev;
     }
-  }
+  };
+
+  for (const a of alerts) apply(a.component_id, a.severity);
+  for (const e of openEvents) apply(e.component_id, e.severity ?? 'low');
+
   return map;
 }
 
@@ -153,9 +163,10 @@ function alertColor(severity: 'low' | 'medium' | 'high'): string {
 interface Props {
   topology: WaterInfraTopology;
   alerts: InfraAlert[];
+  openEvents: AgentEvent[];
 }
 
-export default function WaterInfraMap({ topology, alerts }: Props) {
+export default function WaterInfraMap({ topology, alerts, openEvents }: Props) {
   const { spaceLayout, junctionPositions, svgW, svgH } = useMemo(() => {
     const sl = computeSpaceLayout(topology.spaces);
     const jp = computeAllJunctionPositions(topology.junctions, sl);
@@ -180,7 +191,10 @@ export default function WaterInfraMap({ topology, alerts }: Props) {
   }, [topology]);
 
   const severityMap = useMemo(() => buildSeverityMap(alerts), [alerts]);
-  const componentSeverityMap = useMemo(() => buildComponentSeverityMap(alerts), [alerts]);
+  const componentSeverityMap = useMemo(
+    () => buildComponentSeverityMap(alerts, openEvents),
+    [alerts, openEvents],
+  );
 
   const sensorsByComponent = useMemo(() => {
     const map: Record<string, typeof topology.sensors> = {};
