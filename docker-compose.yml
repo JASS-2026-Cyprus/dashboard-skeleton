@@ -9,7 +9,7 @@ services:
         SUBSYSTEMS_CONFIG: |
           {
             "subsystems": {
-              "airQuality": {
+              "air_quality": {
                 "backendUrl": "${AIR_QUALITY_BACKEND_URL}"
               },
               "waterQuality": {

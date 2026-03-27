@@ -16,7 +16,7 @@ jobs:
           CONFIG=$(cat <<EOF
           {
             "subsystems": {
-              "airQuality": {
+              "air_quality": {
                 "backendUrl": "${{ secrets.AIR_QUALITY_BACKEND_URL }}"
               },
               "waterQuality": {

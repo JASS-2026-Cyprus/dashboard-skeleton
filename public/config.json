@@ -1,3 +1,5 @@
 {
-  "subsystems": {}
+  "subsystems": {
+    "air_quality": { "backendUrl": "http://localhost:38000" }
+  }
 }

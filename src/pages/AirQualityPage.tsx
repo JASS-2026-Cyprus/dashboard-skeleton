@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MultiLineGraph from '../components/MultiLineGraph';
 import styles from './pages.module.css';
+import { useAirQualityData } from '../hooks/useAirQualityData';
+import { getSubsystemBackendUrl } from '../config';
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
@@ -39,34 +41,6 @@ function getCoStatus(v: number) {
   return { color: '#dc2626', level: 'High' };
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-// 24-hour hourly readings, Paphos, Cyprus
-const pm25History = [
-  9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2,
-  21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4,
-  24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3,
-];
-
-const no2History = [
-  19.1, 18.4, 17.8, 17.2, 18.0, 20.5, 27.3, 35.6,
-  38.4, 35.1, 30.8, 27.4, 26.9, 28.1, 30.5, 39.7,
-  42.3, 37.9, 32.6, 28.4, 25.7, 23.9, 22.4, 22.7,
-];
-
-const coHistory = [
-  0.31, 0.29, 0.27, 0.26, 0.28, 0.34, 0.51, 0.72,
-  0.79, 0.71, 0.62, 0.54, 0.52, 0.55, 0.61, 0.80,
-  0.86, 0.75, 0.64, 0.55, 0.48, 0.43, 0.40, 0.38,
-];
-
-const latest = {
-  pm25: 10.3,
-  pm10: 18.4,
-  no2: 22.7,
-  co2: 418,
-  co: 0.38,
-};
 
 // ── Advice generation ─────────────────────────────────────────────────────────
 
@@ -77,7 +51,7 @@ interface AdviceItem {
   message: string;
 }
 
-function generateAdvice(r: typeof latest): AdviceItem[] {
+function generateAdvice(r: { pm25: number; pm10: number; no2: number; co2: number; co: number }): AdviceItem[] {
   const items: AdviceItem[] = [];
 
   if (r.pm25 > 35) {
@@ -127,172 +101,19 @@ function generateAdvice(r: typeof latest): AdviceItem[] {
   return items;
 }
 
-const advice = generateAdvice(latest);
 
-// ── Local events ──────────────────────────────────────────────────────────────
+// ── Event shape from /api/events/live ─────────────────────────────────────────
 
-const events = [
-  {
-    id: 'EVT001',
-    type: 'Construction',
-    name: 'Neapolis phase 1 — residential block construction',
-    status: 'active' as const,
-    zone: 'Z1',
-    hours: 'Mon–Sat · 07:00–17:00',
-    delta: 'PM10 +75 · PM2.5 +20 · NO₂ +40',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT002',
-    type: 'Construction',
-    name: 'Neapolis phase 1 — commercial and retail podium construction',
-    status: 'active' as const,
-    zone: 'Z1',
-    hours: 'Mon–Sat · 07:00–17:00',
-    delta: 'PM10 +60 · PM2.5 +18 · NO₂ +38',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT003',
-    type: 'Construction',
-    name: 'Neapolis health park — hospital and medical centre construction',
-    status: 'active' as const,
-    zone: 'Z1',
-    hours: 'Mon–Fri · 07:00–16:00',
-    delta: 'PM10 +45 · PM2.5 +14 · NO₂ +35',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT004',
-    type: 'Construction',
-    name: 'Neapolis internal road network and utility trenching',
-    status: 'active' as const,
-    zone: 'Z1',
-    hours: 'Mon–Fri · 07:00–16:00',
-    delta: 'PM10 +50 · PM2.5 +15 · NO₂ +55',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT010',
-    type: 'Aviation',
-    name: 'Paphos Airport (PFO) — scheduled commercial flight operations',
-    status: 'active' as const,
-    zone: 'Z6',
-    hours: 'Daily · 06:00–23:00',
-    delta: 'NO₂ +10 · PM2.5 +6',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT012',
-    type: 'Public Event',
-    name: 'Yeroskipou Saturday street market',
-    status: 'upcoming' as const,
-    zone: 'Z7',
-    hours: 'Saturday · 07:00–13:00',
-    delta: 'NO₂ +22 · PM2.5 +18 · CO₂ +30',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT020',
-    type: 'Infrastructure',
-    name: 'Neapolis health park — diesel backup generator test',
-    status: 'upcoming' as const,
-    zone: 'Z1',
-    hours: 'First Wednesday · 10:00–11:00',
-    delta: 'NO₂ +50 · PM2.5 +20',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT005',
-    type: 'Construction',
-    name: 'Neapolis University campus — new faculty building construction',
-    status: 'upcoming' as const,
-    zone: 'Z2',
-    hours: 'Mon–Fri · 07:00–15:00',
-    delta: 'PM10 +40 · PM2.5 +12 · NO₂ +30',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT007',
-    type: 'Road Works',
-    name: 'B6 Yeroskipou road resurfacing — northbound carriageway',
-    status: 'upcoming' as const,
-    zone: 'Z3',
-    hours: 'Mon–Sat · 08:00–17:00',
-    delta: 'PM10 +60 · PM2.5 +18 · NO₂ +35',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT008',
-    type: 'Road Works',
-    name: 'B6 Yeroskipou road resurfacing — southbound carriageway',
-    status: 'upcoming' as const,
-    zone: 'Z3',
-    hours: 'Mon–Sat · 08:00–17:00',
-    delta: 'PM10 +60 · PM2.5 +18 · NO₂ +35',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT011',
-    type: 'Aviation',
-    name: 'PFO summer charter season — intensified flight frequency',
-    status: 'upcoming' as const,
-    zone: 'Z6',
-    hours: 'Daily · 06:00–23:00',
-    delta: 'NO₂ +16 · PM2.5 +9',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT014',
-    type: 'Public Event',
-    name: 'Paphos Aphrodite Festival — opera at Paphos Castle',
-    status: 'upcoming' as const,
-    zone: 'Z3',
-    hours: 'Fri–Sun · 20:00–23:30',
-    delta: 'NO₂ +28 · CO₂ +45 · PM2.5 +12',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT015',
-    type: 'Public Event',
-    name: 'Kataklysmos Festival — Paphos seafront',
-    status: 'upcoming' as const,
-    zone: 'Z4',
-    hours: '1 Jun · 10:00–23:00',
-    delta: 'NO₂ +25 · CO₂ +55 · PM2.5 +15',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT017',
-    type: 'Public Event',
-    name: 'Orthodox Easter midnight service — Yeroskipou',
-    status: 'upcoming' as const,
-    zone: 'Z7',
-    hours: '11–12 Apr · 23:00–01:30',
-    delta: 'PM2.5 +65 · CO₂ +38',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT009',
-    type: 'Construction',
-    name: 'Neapolis green park — topsoil and landscaping works',
-    status: 'upcoming' as const,
-    zone: 'Z1',
-    hours: 'Mon–Sat · 06:00–12:00',
-    delta: 'PM10 +25 · PM2.5 +8 · NO₂ +10',
-    confidence: 'Confirmed',
-  },
-  {
-    id: 'EVT016',
-    type: 'Public Event',
-    name: 'Cyprus Independence Day — municipal events Yeroskipou',
-    status: 'upcoming' as const,
-    zone: 'Z7',
-    hours: '1 Oct · 09:00–13:00',
-    delta: 'NO₂ +18 · CO₂ +25 · PM2.5 +10',
-    confidence: 'Confirmed',
-  },
-];
+interface LiveEvent {
+  id: string;
+  type: string;
+  name: string;
+  status: 'active' | 'upcoming';
+  zone: string;
+  hours: string;
+  delta: string;
+  confidence: string;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -305,20 +126,74 @@ const ADVICE_CLASS: Record<string, string> = {
 export default function AirQualityPage() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [events, setEvents] = useState<LiveEvent[]>([]);
 
+  const { latest, history24h, insights, loading, error } = useAirQualityData();
+
+  // Fetch live events from backend
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchEvents() {
+      try {
+        const backendUrl = getSubsystemBackendUrl('air_quality');
+        const res = await fetch(`${backendUrl}/api/events/live`);
+        if (!res.ok) return;
+        const raw: Array<Record<string, unknown>> = await res.json();
+        if (cancelled) return;
+        const mapped: LiveEvent[] = raw.map((e) => ({
+          id:         String(e.id ?? ''),
+          type:       String(e.type ?? ''),
+          name:       String(e.name ?? ''),
+          status:     (e.confidence_tier === 'low' ? 'upcoming' : 'active') as 'active' | 'upcoming',
+          zone:       String(e.zone ?? ''),
+          hours:      String(e.active_hours ?? ''),
+          delta:      String(e.signature ?? ''),
+          confidence: String(e.confidence_tier ?? 'Confirmed'),
+        }));
+        setEvents(mapped);
+      } catch {
+        // silently ignore — events section is non-critical
+      }
+    }
+    fetchEvents();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading && !latest) {
+    return <div className={styles.pageHeader}>Loading...</div>;
+  }
+
+  const pm25Value = latest?.pm25 ?? 0;
+  const pm10Value = latest?.pm10 ?? 0;
+  const no2Value  = latest?.no2  ?? 0;
+  const co2Value  = latest?.co2  ?? 0;
+  const coValue   = latest?.co   ?? 0;
+
+  const pm25History = history24h?.pm25 ?? [];
+  const no2History  = history24h?.no2  ?? [];
+  const coHistory   = history24h?.co   ?? [];
+
+  const latestForAdvice = { pm25: pm25Value, pm10: pm10Value, no2: no2Value, co2: co2Value, co: coValue };
+  const advice = generateAdvice(latestForAdvice);
   const visibleAdvice = advice.filter((a) => !dismissed.has(a.id));
 
   const pollutants = [
-    { label: 'PM2.5', value: latest.pm25,  unit: 'µg/m³', limit: 15,   ...getPm25Status(latest.pm25) },
-    { label: 'PM10',  value: latest.pm10,  unit: 'µg/m³', limit: 45,   ...getPm10Status(latest.pm10) },
-    { label: 'NO₂',   value: latest.no2,   unit: 'µg/m³', limit: 25,   ...getNo2Status(latest.no2) },
-    { label: 'CO₂',   value: latest.co2,   unit: 'ppm',   limit: 1000, ...getCo2Status(latest.co2) },
-    { label: 'CO',    value: latest.co,    unit: 'mg/m³', limit: 4,    ...getCoStatus(latest.co) },
+    { label: 'PM2.5', value: pm25Value, unit: 'µg/m³', limit: 15,   ...getPm25Status(pm25Value) },
+    { label: 'PM10',  value: pm10Value, unit: 'µg/m³', limit: 45,   ...getPm10Status(pm10Value) },
+    { label: 'NO₂',   value: no2Value,  unit: 'µg/m³', limit: 25,   ...getNo2Status(no2Value) },
+    { label: 'CO₂',   value: co2Value,  unit: 'ppm',   limit: 1000, ...getCo2Status(co2Value) },
+    { label: 'CO',    value: coValue,   unit: 'mg/m³', limit: 4,    ...getCoStatus(coValue) },
   ];
 
   return (
     <>
       <h1 className={styles.pageHeader}>Air Quality</h1>
+
+      {error && (
+        <div className={styles.section} style={{ background: 'var(--color-red-bg, #fee2e2)', color: 'var(--color-red-text, #dc2626)', padding: '0.75rem 1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+          Failed to load air quality data: {error}
+        </div>
+      )}
 
       {/* ── Current Conditions ── */}
       <div className={styles.section}>
@@ -381,9 +256,9 @@ export default function AirQualityPage() {
         <MultiLineGraph
           title="Sensor Readings"
           series={[
-            { data: pm25History, label: 'PM2.5', unit: 'µg/m³', color: '#0284c7', currentValue: `${latest.pm25} µg/m³`,          yAxisId: 'left' },
-            { data: no2History,  label: 'NO₂',   unit: 'µg/m³', color: '#d97706', currentValue: `${latest.no2} µg/m³`,           yAxisId: 'left' },
-            { data: coHistory,   label: 'CO',     unit: 'mg/m³', color: '#c2410c', currentValue: `${latest.co.toFixed(2)} mg/m³`, yAxisId: 'right' },
+            { data: pm25History, label: 'PM2.5', unit: 'µg/m³', color: '#0284c7', currentValue: `${pm25Value} µg/m³`,              yAxisId: 'left' },
+            { data: no2History,  label: 'NO₂',   unit: 'µg/m³', color: '#d97706', currentValue: `${no2Value} µg/m³`,               yAxisId: 'left' },
+            { data: coHistory,   label: 'CO',     unit: 'mg/m³', color: '#c2410c', currentValue: `${coValue.toFixed(2)} mg/m³`,     yAxisId: 'right' },
           ]}
         />
       </div>
@@ -447,16 +322,15 @@ export default function AirQualityPage() {
             <div className={styles.insightCard}>
               <h3 className={styles.sectionTitle}>Anomaly Hypothesis</h3>
               <p className={styles.sectionText}>
-                Elevated PM10 and NO₂ correlate with active construction in Zone 1 (university expansion).
-                Pattern consistent with diesel machinery and earthworks dust.
+                {insights?.anomaly.hypothesis ?? 'No anomaly data available.'}
               </p>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Risk level</span>
-                <span className={styles.configValue} style={{ color: '#b8860b' }}>Medium</span>
+                <span className={styles.configValue} style={{ color: '#b8860b' }}>{insights?.anomaly.risk_level ?? '—'}</span>
               </div>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Confidence</span>
-                <span className={styles.configValue}>87%</span>
+                <span className={styles.configValue}>{insights ? `${Math.round((insights.anomaly.confidence ?? 0) * 100)}%` : '—'}</span>
               </div>
             </div>
 
@@ -464,26 +338,26 @@ export default function AirQualityPage() {
               <h3 className={styles.sectionTitle}>30-min Forecast</h3>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Trend</span>
-                <span className={styles.configValue} style={{ color: '#639922' }}>↘ Improving</span>
+                <span className={styles.configValue} style={{ color: '#639922' }}>{insights?.forecast.trend ?? '—'}</span>
               </div>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Predicted PM2.5</span>
-                <span className={styles.configValue}>9.8 µg/m³</span>
+                <span className={styles.configValue}>{pm25Value} µg/m³</span>
               </div>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Predicted NO₂</span>
-                <span className={styles.configValue}>21.4 µg/m³</span>
+                <span className={styles.configValue}>{no2Value} µg/m³</span>
               </div>
               <div className={styles.configRow}>
                 <span className={styles.configLabel}>Predicted CO</span>
-                <span className={styles.configValue}>0.35 mg/m³</span>
+                <span className={styles.configValue}>{coValue.toFixed(3)} mg/m³</span>
               </div>
               <div className={styles.configRow}>
-                <span className={styles.configLabel}>Confidence</span>
-                <span className={styles.configValue}>79%</span>
+                <span className={styles.configLabel}>Risk level</span>
+                <span className={styles.configValue}>{insights?.forecast.risk_level ?? '—'}</span>
               </div>
               <p className={styles.sectionText} style={{ marginTop: '0.5rem', marginBottom: 0 }}>
-                Morning construction activity subsiding. Sea breeze from southwest expected to disperse pollutants over the next 30 minutes.
+                {insights?.forecast.reasoning ?? ''}
               </p>
             </div>
           </div>
