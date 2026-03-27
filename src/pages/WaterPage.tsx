@@ -218,7 +218,7 @@ export default function WaterPage() {
     loading, error, refresh, lastRefresh,
   } = useWaterData(selectedPool);
 
-  const { alertFeed, wsConnected, bbConnected } = useAgentAlerts();
+  const { alertFeed, wsConnected } = useAgentAlerts();
 
   return (
     <div className={styles.page}>
@@ -277,11 +277,7 @@ export default function WaterPage() {
             <div className={styles.statusDots}>
               <span className={styles.dot} style={{ background: wsConnected ? '#22c55e' : '#aaa' }} />
               <span style={{ color: wsConnected ? 'var(--color-green-text)' : '#aaa', fontSize: 11 }}>
-                swarm {wsConnected ? 'live' : 'offline'}
-              </span>
-              <span className={styles.dot} style={{ background: bbConnected ? '#22c55e' : '#aaa' }} />
-              <span style={{ color: bbConnected ? 'var(--color-green-text)' : '#aaa', fontSize: 11 }}>
-                blackboard {bbConnected ? 'live' : 'offline'}
+                agent {wsConnected ? 'connected' : 'offline'}
               </span>
             </div>
             <button className={styles.refreshBtn} onClick={refresh}>↻ Refresh</button>
