@@ -186,11 +186,7 @@ export default function Overview() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <SystemSummary
-        action="Monitor pool clarity delta. Water agent is active."
-        urgency="Routine monitoring. No immediate service disruptions forecasted."
-        state="4 teams active. All sensors operational."
-      />
+      <SystemSummary />
       <div className="grid" style={{ flex: 1, minHeight: 0 }}>
         <TeamWidget
           title="Maintenance"
