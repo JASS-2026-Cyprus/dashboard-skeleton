@@ -1,6 +1,31 @@
 import { useState, useMemo } from 'react';
+import { Line, Pie } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
 import type { Report } from './firebase';
 import styles from './maintenance.module.css';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const CAT_COLORS: Record<string, string> = {
   trash: '#f97316', waste: '#f97316', fire: '#ef4444', smoke: '#ef4444',
@@ -35,7 +60,6 @@ export default function DashboardTab({ reports }: Props) {
   const rPending = filtered.filter((r) => r.status === 'pending').length;
   const rProgress = filtered.filter((r) => r.status === 'in_progress').length;
   const rResolved = filtered.filter((r) => r.status === 'resolved').length;
-  const rHigh = filtered.filter((r) => r.severity === 'high').length;
   const resolveRate = rTotal > 0 ? Math.round((rResolved / rTotal) * 100) : 0;
 
   // Category counts
@@ -48,14 +72,6 @@ export default function DashboardTab({ reports }: Props) {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [filtered]);
 
-  // Severity counts for pie
-  const sevCounts = useMemo(() => {
-    const c = { high: 0, medium: 0, low: 0 };
-    filtered.forEach((r) => {
-      if (c[r.severity] !== undefined) c[r.severity]++;
-    });
-    return c;
-  }, [filtered]);
 
   // Timeline (group by week)
   const timelineData = useMemo(() => {
@@ -91,37 +107,28 @@ export default function DashboardTab({ reports }: Props) {
     return Object.entries(areas).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [filtered]);
 
-  // Severity pie
-  const sevTotal = sevCounts.high + sevCounts.medium + sevCounts.low;
-  const slices = [
-    { label: 'High', count: sevCounts.high, color: '#ef4444' },
-    { label: 'Medium', count: sevCounts.medium, color: '#f97316' },
-    { label: 'Low', count: sevCounts.low, color: '#059669' },
-  ].filter((s) => s.count > 0);
 
-  let angle = 0;
-  const pieSlices = slices.map((s) => {
-    const pct = sevTotal > 0 ? s.count / sevTotal : 0;
-    const start = angle;
-    angle += pct * 360;
-    return { ...s, start, end: angle, pct };
-  });
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const cx = 55, cy = 55, r = 45;
-
-  // Report status bars
-  const rMax = Math.max(rPending, rProgress, rResolved, 1);
-
-  // Timeline chart
-  const tlMax = timelineData.length ? Math.max(...timelineData.map((t) => t[1])) : 1;
-  const TW = 400, TH = 140;
-  const TPAD = { top: 10, right: 10, bottom: 24, left: 30 };
-  const tcW = TW - TPAD.left - TPAD.right;
-  const tcH = TH - TPAD.top - TPAD.bottom;
+  // Timeline chart data
+  const timelineChartData = {
+    labels: timelineData.map(([week]) => week.slice(5)),
+    datasets: [
+      {
+        label: 'Reports',
+        data: timelineData.map(([, cnt]) => cnt),
+        borderColor: 'var(--color-blue)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: 'var(--color-blue)',
+        pointBorderWidth: 0,
+        borderWidth: 2,
+      },
+    ],
+  };
 
   return (
-    <>
+    <div style={{ paddingRight: '2rem' }}>
       {/* Time filter */}
       <div style={{ marginBottom: '1rem' }}>
         <select className={styles.filterSelect} value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
@@ -132,178 +139,184 @@ export default function DashboardTab({ reports }: Props) {
         </select>
       </div>
 
-      {/* Stats cards */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statVal}>{rTotal}</div>
-          <div className={styles.statLbl}>Total Reports</div>
-        </div>
-        <div className={`${styles.statCard} ${styles.statWarn}`}>
-          <div className={styles.statVal}>{rPending}</div>
-          <div className={styles.statLbl}>Pending</div>
-        </div>
-        <div className={`${styles.statCard} ${styles.statGood}`}>
-          <div className={styles.statVal}>{rResolved}</div>
-          <div className={styles.statLbl}>Resolved</div>
-        </div>
-        <div className={`${styles.statCard} ${styles.statDanger}`}>
-          <div className={styles.statVal}>{rHigh}</div>
-          <div className={styles.statLbl}>High Severity</div>
-        </div>
-      </div>
-
-      <div className={styles.dashGrid}>
-        {/* Timeline chart */}
-        <div className={styles.dashSection}>
-          <div className={styles.dashSectionTitle}>Reports Timeline</div>
-          {timelineData.length > 0 ? (
-            <svg viewBox={`0 0 ${TW} ${TH}`} style={{ width: '100%', height: 'auto' }}>
-              {[0, 1, 2, 3, 4].map((i) => {
-                const y = TPAD.top + (i / 4) * tcH;
-                return (
-                  <g key={i}>
-                    <line x1={TPAD.left} y1={y} x2={TPAD.left + tcW} y2={y} stroke="var(--color-border)" strokeWidth="0.5" />
-                    <text x={TPAD.left - 4} y={y + 3} textAnchor="end" fontSize="9" fill="var(--color-text-secondary)">
-                      {Math.round(tlMax * (1 - i / 4))}
-                    </text>
-                  </g>
-                );
-              })}
-              {timelineData.map(([week, cnt], i) => {
-                const barW = Math.max(8, tcW / timelineData.length - 4);
-                const x = TPAD.left + (i / timelineData.length) * tcW + 2;
-                const h = (cnt / tlMax) * tcH;
-                const y = TPAD.top + tcH - h;
-                return (
-                  <g key={week}>
-                    <rect x={x} y={y} width={barW} height={h} rx={3} fill="var(--color-blue)" opacity={0.85} />
-                    <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="9" fill="var(--color-text-secondary)" fontWeight="600">{cnt}</text>
-                    <text x={x + barW / 2} y={TH - 4} textAnchor="middle" fontSize="8" fill="var(--color-text-secondary)">{week.slice(5)}</text>
-                  </g>
-                );
-              })}
-            </svg>
-          ) : (
-            <div className={styles.empty}>No data yet</div>
-          )}
+      {/* Total incidents, Report status & severity and category distribution row */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        {/* Total incidents box */}
+        <div style={{
+          background: 'var(--color-bg-primary)',
+          border: '0.5px solid var(--color-border)',
+          borderRadius: 'var(--border-radius)',
+          padding: '1rem',
+          width: '200px',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 48, fontWeight: 700, color: 'var(--color-blue)' }}>{rTotal}</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', fontWeight: 500, marginTop: '0.25rem' }}>Total Incidents</div>
         </div>
 
-        {/* Category distribution */}
-        <div className={styles.dashSection}>
-          <div className={styles.dashSectionTitle}>Category Distribution</div>
-          {catCounts.length > 0 ? (
-            catCounts.map(([cat, cnt], i) => {
-              const color = CAT_COLORS[cat.toLowerCase()] || CHART_COLORS[i % CHART_COLORS.length];
-              const max = catCounts[0][1];
-              return (
-                <div key={cat} className={styles.barRow}>
-                  <span className={styles.barLabel}>{cat}</span>
-                  <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={{ width: `${(cnt / max) * 100}%`, background: color }} />
-                  </div>
-                  <span className={styles.barVal}>{cnt}</span>
-                </div>
-              );
-            })
-          ) : (
-            <div className={styles.empty}>No data yet</div>
-          )}
-        </div>
-
-        {/* Report status */}
-        <div className={styles.dashSection}>
+        {/* Report Status - Horizontal Bar Chart */}
+        <div className={styles.dashSection} style={{ flex: 1 }}>
           <div className={styles.dashSectionTitle}>Report Status</div>
-          <div className={styles.barRow}>
-            <span className={styles.barLabel}>⏳ Pending</span>
-            <div className={styles.barTrack}>
-              <div className={styles.barFill} style={{ width: `${(rPending / rMax) * 100}%`, background: '#f97316' }} />
-            </div>
-            <span className={styles.barVal}>{rPending}</span>
-          </div>
-          <div className={styles.barRow}>
-            <span className={styles.barLabel}>🚁 In Progress</span>
-            <div className={styles.barTrack}>
-              <div className={styles.barFill} style={{ width: `${(rProgress / rMax) * 100}%`, background: '#a855f7' }} />
-            </div>
-            <span className={styles.barVal}>{rProgress}</span>
-          </div>
-          <div className={styles.barRow}>
-            <span className={styles.barLabel}>✅ Resolved</span>
-            <div className={styles.barTrack}>
-              <div className={styles.barFill} style={{ width: `${(rResolved / rMax) * 100}%`, background: '#059669' }} />
-            </div>
-            <span className={styles.barVal}>{rResolved}</span>
-          </div>
-        </div>
-
-        {/* Severity pie */}
-        <div className={styles.dashSection}>
-          <div className={styles.dashSectionTitle}>Severity Distribution</div>
-          {sevTotal > 0 ? (
-            <>
-              <svg viewBox="0 0 110 110" width="110" height="110" className={styles.pieSvg}>
-                {pieSlices.map((p) => {
-                  if (p.pct >= 0.999) return <circle key={p.label} cx={cx} cy={cy} r={r} fill={p.color} />;
-                  const s = toRad(p.start - 90);
-                  const e = toRad(p.end - 90);
-                  const x1 = cx + r * Math.cos(s);
-                  const y1 = cy + r * Math.sin(s);
-                  const x2 = cx + r * Math.cos(e);
-                  const y2 = cy + r * Math.sin(e);
-                  const large = p.pct > 0.5 ? 1 : 0;
-                  return <path key={p.label} d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`} fill={p.color} />;
-                })}
-                <circle cx={cx} cy={cy} r={22} fill="var(--color-bg-primary)" />
-                <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="700" fill="var(--color-text-primary)">{sevTotal}</text>
-              </svg>
-              {slices.map((s) => (
-                <div key={s.label} className={styles.catRow}>
-                  <span className={styles.catDot} style={{ background: s.color }} />
-                  <span className={styles.catName}>{s.label}</span>
-                  <span className={styles.catCnt}>{s.count}</span>
+          {rTotal > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>⏳ Pending</span>
+                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(rPending / rTotal) * 100}%`, height: '100%', background: '#f97316', borderRadius: '4px', transition: 'width 0.3s' }} />
                 </div>
-              ))}
-            </>
+                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rPending}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>🚁 In Progress</span>
+                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(rProgress / rTotal) * 100}%`, height: '100%', background: '#a855f7', borderRadius: '4px', transition: 'width 0.3s' }} />
+                </div>
+                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rProgress}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>✅ Resolved</span>
+                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(rResolved / rTotal) * 100}%`, height: '100%', background: '#059669', borderRadius: '4px', transition: 'width 0.3s' }} />
+                </div>
+                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rResolved}</span>
+              </div>
+            </div>
           ) : (
             <div className={styles.empty}>No data</div>
           )}
         </div>
 
-        {/* Sidebar stats */}
-        <div className={styles.dashSection}>
-          <div className={styles.dashSectionTitle}>Summary</div>
-          <div className={styles.sidebarStat}>
-            <span>Resolve Rate</span>
-            <span className={styles.sidebarStatVal}>{resolveRate}%</span>
-          </div>
-          <div className={styles.sidebarStat}>
-            <span>In Progress</span>
-            <span className={styles.sidebarStatVal}>{rProgress}</span>
-          </div>
-          <div className={styles.sidebarStat}>
-            <span>Reports/Week</span>
-            <span className={styles.sidebarStatVal}>{rTotal > 0 ? (rTotal / getWeekSpan(filtered)).toFixed(1) : '0'}</span>
+        {/* Category Distribution - Pie Chart */}
+        <div className={styles.dashSection} style={{ flex: 1 }}>
+          <div className={styles.dashSectionTitle}>Category Distribution</div>
+          {catCounts.length > 0 ? (
+            <div style={{ height: '180px' }}>
+              <Pie
+                data={{
+                  labels: catCounts.map(([cat]) => cat),
+                  datasets: [
+                    {
+                      data: catCounts.map(([, cnt]) => cnt),
+                      backgroundColor: catCounts.map(([cat], i) => CAT_COLORS[cat.toLowerCase()] || CHART_COLORS[i % CHART_COLORS.length]),
+                      borderWidth: 0,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: {
+                        color: 'var(--color-text-secondary)',
+                        font: { size: 10 },
+                        padding: 8,
+                        usePointStyle: true,
+                      },
+                    },
+                    tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      padding: 8,
+                      bodyFont: { size: 11 },
+                      cornerRadius: 4,
+                    },
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <div className={styles.empty}>No data yet</div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary and Timeline row */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        {/* Summary box */}
+        <div className={styles.dashSection} style={{ width: '200px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{resolveRate}%</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Resolve Rate</div>
+            </div>
+            <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{rProgress}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>In Progress</div>
+            </div>
+            <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{rTotal > 0 ? (rTotal / getWeekSpan(filtered)).toFixed(1) : '0'}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Reports/Week</div>
+            </div>
           </div>
         </div>
 
-        {/* Categories */}
-        <div className={styles.dashSection}>
-          <div className={styles.dashSectionTitle}>Categories</div>
-          {catCounts.length > 0 ? (
-            catCounts.map(([cat, cnt]) => {
-              const color = CAT_COLORS[cat.toLowerCase()] || '#6b7280';
-              return (
-                <div key={cat} className={styles.catRow}>
-                  <span className={styles.catDot} style={{ background: color }} />
-                  <span className={styles.catName}>{cat}</span>
-                  <span className={styles.catCnt}>{cnt}</span>
-                </div>
-              );
-            })
+        {/* Timeline chart section */}
+        <div className={styles.dashSection} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div className={styles.dashSectionTitle}>Reports Timeline</div>
+          {timelineData.length > 0 ? (
+            <div style={{ height: '200px', flex: 1, width: '100%' }}>
+              <Line
+                data={timelineChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false,
+                    },
+                    tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      padding: 8,
+                      titleFont: { size: 12 },
+                      bodyFont: { size: 12 },
+                      cornerRadius: 4,
+                    },
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        color: 'rgba(229, 231, 235, 0.6)',
+                        lineWidth: 0.8,
+                      },
+                      ticks: {
+                        color: 'var(--color-text-secondary)',
+                        font: { size: 11 },
+                      },
+                      border: {
+                        display: false,
+                      },
+                    },
+                    x: {
+                      grid: {
+                        display: false,
+                      },
+                      ticks: {
+                        color: 'var(--color-text-secondary)',
+                        font: { size: 11 },
+                      },
+                      border: {
+                        display: false,
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
           ) : (
-            <div className={styles.empty}>No categories</div>
+            <div className={styles.empty}>No data yet</div>
           )}
         </div>
+      </div>
+
+      {/* Top reporters and hotspots side by side */}
+      <div className={styles.dashGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
 
         {/* Top reporters */}
         <div className={styles.dashSection}>
@@ -340,6 +353,6 @@ export default function DashboardTab({ reports }: Props) {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
