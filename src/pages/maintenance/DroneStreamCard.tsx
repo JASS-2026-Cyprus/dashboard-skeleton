@@ -1,21 +1,60 @@
 import { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
 import { subscribeDroneStream, getDroneStream, type DroneStreamStatus } from './firebase';
 import styles from './maintenance.module.css';
 
-const HLS_PATH = '/stream/api/stream.m3u8?src=drone';
+const RECONNECT_DELAY = 3000;
 
-async function registerRtspSource(rtspUrl: string) {
-  // go2rtc takes src as a query parameter, NOT in the body
-  const url = `/stream/api/streams?name=drone&src=${encodeURIComponent(rtspUrl)}`;
-  const res = await fetch(url, { method: 'PUT' });
-  console.log('[drone] stream registration:', res.status, rtspUrl);
-  // give go2rtc a moment to connect to the RTSP source
-  await new Promise((r) => setTimeout(r, 2000));
-}
+async function startWhep(
+  whepUrl: string,
+  video: HTMLVideoElement,
+  signal: AbortSignal,
+  onError: (msg: string) => void,
+  onPlaying: () => void,
+): Promise<RTCPeerConnection | null> {
+  try {
+    const pc = new RTCPeerConnection();
 
-async function clearRtspSource() {
-  await fetch('/stream/api/streams?name=drone', { method: 'DELETE' }).catch(() => {});
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+
+    pc.ontrack = (evt) => {
+      video.srcObject = evt.streams[0];
+      video.play().catch(() => {});
+      onPlaying();
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (signal.aborted) return;
+      const state = pc.connectionState;
+      if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+        onError('Stream interrupted — reconnecting…');
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const res = await fetch(whepUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: offer.sdp,
+      signal,
+    });
+
+    if (!res.ok) {
+      pc.close();
+      onError(`WHEP error: ${res.status}`);
+      return null;
+    }
+
+    const answerSdp = await res.text();
+    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+    return pc;
+  } catch (err) {
+    if (!signal.aborted) onError('Failed to connect WebRTC stream');
+    return null;
+  }
 }
 
 export default function DroneStreamCard() {
@@ -23,9 +62,11 @@ export default function DroneStreamCard() {
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Subscribe to Firestore real-time updates
   useEffect(() => {
@@ -33,56 +74,61 @@ export default function DroneStreamCard() {
     return unsub;
   }, []);
 
-  // Set up / tear down HLS player when RTSP URL changes
+  // Set up / tear down WebRTC when stream changes
+  const whepUrl = droneStatus?.whep_url ?? null;
+  const isLive = droneStatus?.status === 'streaming' && !!whepUrl;
+
   useEffect(() => {
-    const rtspUrl = droneStatus?.rtsp_url ?? null;
+    // Cleanup previous connection
+    abortRef.current?.abort();
+    pcRef.current?.close();
+    pcRef.current = null;
 
-    if (!rtspUrl) {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-        clearRtspSource();
-      }
-      return;
-    }
+    setVideoPlaying(false);
+    if (!isLive || !whepUrl) return;
 
-    setVideoError(null);
+    const ac = new AbortController();
+    abortRef.current = ac;
 
-    registerRtspSource(rtspUrl).then(() => {
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
       const video = videoRef.current;
-      if (!video) return;
+      if (!video || ac.signal.aborted) return;
 
-      if (Hls.isSupported()) {
-        hlsRef.current?.destroy();
-        const hls = new Hls({
-          liveSyncDuration: 2,
-          liveMaxLatencyDuration: 6,
-          lowLatencyMode: true,
-        });
-        hls.on(Hls.Events.ERROR, (_e, data) => {
-          if (data.fatal) setVideoError('Drone unreachable — is it deployed and streaming?');
-        });
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setVideoError(null);
-          video.play().catch(() => {});
-        });
-        hls.loadSource(HLS_PATH);
-        hls.attachMedia(video);
-        hlsRef.current = hls;
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS (Safari)
-        video.src = HLS_PATH;
-        video.play().catch(() => {});
-      } else {
-        setVideoError('HLS playback not supported in this browser.');
+      setVideoError(null);
+      const pc = await startWhep(
+        whepUrl,
+        video,
+        ac.signal,
+        (msg) => {
+          if (ac.signal.aborted) return;
+          setVideoError(msg);
+          pcRef.current?.close();
+          pcRef.current = null;
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            if (!ac.signal.aborted) connect();
+          }, RECONNECT_DELAY);
+        },
+        () => { setVideoError(null); setVideoPlaying(true); },
+      );
+      if (pc && !ac.signal.aborted) {
+        pcRef.current = pc;
       }
-    });
+    };
+
+    // Small delay to ensure video element is mounted after render
+    const initTimer = setTimeout(connect, 100);
 
     return () => {
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
+      ac.abort();
+      clearTimeout(initTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      pcRef.current?.close();
+      pcRef.current = null;
     };
-  }, [droneStatus?.rtsp_url]);
+  }, [isLive, whepUrl]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -101,8 +147,6 @@ export default function DroneStreamCard() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
-
-  const isLive = droneStatus?.status === 'streaming';
 
   return (
     <div className={styles.card}>
@@ -134,7 +178,6 @@ export default function DroneStreamCard() {
       </div>
 
       <div className={styles.streamScreen}>
-        {/* Actual video — only mounted when live so HLS doesn't initialise on a null element */}
         {isLive && (
           <video
             ref={videoRef}
@@ -145,10 +188,15 @@ export default function DroneStreamCard() {
           />
         )}
 
-        {/* Overlays */}
+        {isLive && !videoPlaying && !videoError && (
+          <div className={styles.streamScreenCenter}>
+            <span className={styles.spinner} />
+            <div className={styles.streamOfflineText}>Connecting to WebRTC stream…</div>
+          </div>
+        )}
+
         {isLive && (
           <>
-            <div className={styles.streamScanlines} />
             <div className={styles.streamCornerTL} />
             <div className={styles.streamCornerTR} />
             <div className={styles.streamCornerBL} />
@@ -166,12 +214,16 @@ export default function DroneStreamCard() {
             </div>
 
             {videoError && (
-              <div className={styles.streamErrorOverlay}>{videoError}</div>
+              <div className={styles.streamScreenCenter} style={{ zIndex: 4 }}>
+                <div className={styles.streamOfflineIcon}>⚠️</div>
+                <div className={styles.streamOfflineText} style={{ color: '#fbbf24' }}>{videoError}</div>
+                <div className={styles.streamOfflineSub}>Attempting to reconnect…</div>
+              </div>
             )}
 
             <div className={styles.streamBottomBar}>
               <div className={styles.streamRtspRow}>
-                <span className={styles.streamRtspLabel}>RTSP</span>
+                <span className={styles.streamRtspLabel}>WebRTC</span>
                 <span className={styles.streamRtspAddr}>{droneStatus.rtsp_url}</span>
                 <button className={styles.copyBtn} onClick={copyRtsp}>
                   {copied ? '✓ Copied' : 'Copy'}
