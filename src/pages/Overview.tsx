@@ -30,7 +30,7 @@ function WaterOverviewContent({ selectedPool, onPoolChange }: {
           background: 'white',
           color: '#1a1a1a',
           cursor: 'pointer',
-          marginBottom: 8,
+          marginBottom: 4,
           width: '100%',
         }}
       >
