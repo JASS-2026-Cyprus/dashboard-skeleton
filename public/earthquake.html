@@ -363,9 +363,23 @@ async function fetchHistory() {
         return `<div class="event"><span class="badge earthquake">EQ</span> P=${((r.probability||0)*100).toFixed(0)}% PGA=${(r.pga_g||0).toFixed(3)}g<div class="time">${t}</div></div>`;
     }).join('');
 
-    // Activate drone button if newest earthquake is < 180 sec old
+    // Check newest earthquake from DB
     const newest = rows[0];
     const ageSec = (Date.now() - new Date(newest.created_at).getTime()) / 1000;
+
+    // Keep LSTM status red if earthquake < 30 sec ago (catches what sensor_stream misses)
+    if(ageSec < 30) {
+        window._lastEqTime = Date.now() - ageSec*1000;
+        document.getElementById('lstm-status').textContent='EARTHQUAKE';
+        document.getElementById('lstm-status').className='value red';
+        // Show popup if not shown yet
+        if(!window._eqPopupShown){
+            window._eqPopupShown=true;
+            showEqAlert(newest.pga_g||0, newest.probability||0);
+            setTimeout(()=>{window._eqPopupShown=false;},30000);
+        }
+    }
+
     if(ageSec < 180 && !window._droneActive){
         activateDroneBtn(Math.ceil(180 - ageSec));
     }
