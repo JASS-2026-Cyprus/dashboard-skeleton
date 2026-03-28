@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/proxy/blackboard': {
+        target: 'https://blackboard.jass.school',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/blackboard/, ''),
+      },
       '/api/vlm': {
         target: 'https://hub.nhr.fau.de/api/llmgw/v1',
         changeOrigin: true,
