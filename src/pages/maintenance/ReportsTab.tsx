@@ -30,6 +30,7 @@ export default function ReportsTab({ reports }: Props) {
   const [missionActive, setMissionActive] = useState(false);
   const [dispatching, setDispatching] = useState(false);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
 
   const sorted = [...reports].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -71,7 +72,22 @@ export default function ReportsTab({ reports }: Props) {
     }
   }, [activeReportId, waypoint]);
 
+  const handleResolve = useCallback(async () => {
+    if (!activeReportId) return;
+    setResolving(true);
+    try {
+      await updateReportStatus(activeReportId, 'resolved');
+      setMissionActive(false);
+    } finally {
+      setResolving(false);
+    }
+  }, [activeReportId]);
+
   const isFiltered = priorityFilter !== '' || statusFilter !== '';
+
+  let resolveLabel = '✅ Mark as Resolved';
+  if (resolving) resolveLabel = 'Resolving…';
+  else if (activeReport?.status === 'resolved') resolveLabel = '✅ Resolved';
 
   return (
     <div className={styles.splitLayout}>
@@ -209,6 +225,14 @@ export default function ReportsTab({ reports }: Props) {
             )}
 
             {missionActive && <DroneDispatch />}
+
+            <button
+              className={`${styles.btn} ${styles.btnSuccess} ${styles.btnResolve}`}
+              disabled={activeReport.status === 'resolved' || resolving}
+              onClick={handleResolve}
+            >
+              {resolveLabel}
+            </button>
           </div>
         ) : (
           <div className={styles.empty}>Select a report to view details</div>
