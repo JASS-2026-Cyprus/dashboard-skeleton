@@ -507,7 +507,7 @@ async function launchDrone(){
     localStorage.setItem('drone_launched_at', Date.now().toString());
     try{
         const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://10.10.8.134:5050';
-        const r=await fetch(url+'/pipeline/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
+        const r=await fetch(url+'/pipeline/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
         if(r.ok){btn.textContent='DRONE LAUNCHED';btn.style.background='#639922';
             document.getElementById('drone-status-text').textContent='Scanning...';
             document.getElementById('drone-status-text').style.color='#f5a623';
