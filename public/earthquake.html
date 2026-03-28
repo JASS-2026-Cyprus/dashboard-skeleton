@@ -424,6 +424,9 @@ function updateStatus(){
 }
 
 function activateDroneBtn(seconds){
+    // Don't activate if drone was already launched for this earthquake
+    const launchedAt = parseInt(localStorage.getItem('drone_launched_at')||'0');
+    if(Date.now() - launchedAt < 180000) return;
     window._droneActive=true;
     window._droneEnd=Date.now()+seconds*1000;
     const btn=document.getElementById('launch-drone-btn');
@@ -446,6 +449,8 @@ function activateDroneBtn(seconds){
 async function launchDrone(){
     const btn=document.getElementById('launch-drone-btn');
     btn.textContent='LAUNCHING...';btn.style.opacity='0.5';btn.disabled=true;
+    // Remember launch so button stays disabled after refresh
+    localStorage.setItem('drone_launched_at', Date.now().toString());
     try{
         const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://localhost:5050';
         const r=await fetch(url+'/pipeline/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
