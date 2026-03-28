@@ -68,16 +68,25 @@ export default function ReportsTab({ reports }: Props) {
 
     try {
       await goToLocation([waypoint.x, waypoint.y]);
-      // 200 = success, proceed with mission
       await updateReportStatus(activeReportId, 'in_progress').catch(() => {});
       setMissionActive(true);
     } catch (e) {
-      // Non-200: cancelled by operator, drone already airborne, or server error
       setDispatchError(e instanceof Error ? e.message : 'Failed to reach drone API');
     } finally {
       setDispatching(false);
     }
   }, [activeReportId, waypoint]);
+
+  const handleFootageReady = useCallback(
+    (file: File) => {
+      if (activeReportId) {
+        onStartAnalysis(file, activeReportId);
+      }
+    },
+    [activeReportId, onStartAnalysis],
+  );
+
+  const isFiltered = priorityFilter !== '' || statusFilter !== '';
 
   return (
     <div className={styles.splitLayout}>
@@ -97,6 +106,13 @@ export default function ReportsTab({ reports }: Props) {
             <option value="resolved">Resolved</option>
           </select>
         </div>
+
+        {isFiltered && (
+          <div className={styles.filterCount}>
+            Showing {filtered.length} of {reports.length} report{reports.length !== 1 ? 's' : ''}
+          </div>
+        )}
+
         <div className={styles.reportsList}>
           {filtered.length === 0 ? (
             <div className={styles.empty}>No reports match the filters.</div>
@@ -164,7 +180,9 @@ export default function ReportsTab({ reports }: Props) {
             <h2 className={styles.rdTitle}>{activeReport.title || 'Untitled Report'}</h2>
             <div className={styles.rdMeta}>
               <span>👤 {activeReport.reportedBy || 'Anonymous'}</span>
+              <span className={styles.rdMetaSep}>·</span>
               <span>🕐 {activeReport.createdAt ? new Date(activeReport.createdAt).toLocaleString() : 'Unknown'}</span>
+              <span className={styles.rdMetaSep}>·</span>
               <span>📍 {activeReport.address || 'Unknown location'}</span>
             </div>
             {activeReport.description && (
@@ -190,12 +208,13 @@ export default function ReportsTab({ reports }: Props) {
                   onClick={handleDispatch}
                   style={{ width: '100%', marginTop: '0.5rem' }}
                 >
-                  {dispatching
-                    ? '🚁 Sending mission…'
-                    : waypoint
-                      ? `🚁 Fly to (${waypoint.y.toFixed(5)}, ${waypoint.x.toFixed(5)})`
-                      : '🚁 Select a point on the map to dispatch'}
+                  {dispatching ? 'Dispatching…' : waypoint ? '🚁 Dispatch Drone' : 'Set a waypoint on the map to dispatch'}
                 </button>
+                {waypoint && !dispatching && (
+                  <div className={styles.dispatchCoords}>
+                    Target: {waypoint.y.toFixed(5)}, {waypoint.x.toFixed(5)}
+                  </div>
+                )}
                 {dispatchError && (
                   <div style={{ marginTop: '0.5rem', fontSize: 13, color: '#c53030' }}>
                     {dispatchError}

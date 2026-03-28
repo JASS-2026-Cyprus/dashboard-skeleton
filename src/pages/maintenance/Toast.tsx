@@ -2,70 +2,103 @@ import { useEffect, useState, useCallback } from 'react';
 import type { Report } from './firebase';
 import styles from './maintenance.module.css';
 
+const VISIBLE_MS = 5000;   // how long the toast stays fully visible
+const FADE_MS    = 400;    // must match CSS fadeOut duration
+
+interface ToastItem {
+  report: Report;
+  dismissing: boolean;
+}
+
 interface Props {
   reports: Report[];
   onClickReport: (id: string) => void;
 }
 
 export default function Toast({ reports, onClickReport }: Props) {
-  const [pending, setPending] = useState<Report[]>([]);
+  const [items, setItems] = useState<ToastItem[]>([]);
   const [knownIds, setKnownIds] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
 
+  // Seed known IDs on first load so existing reports don't toast
   useEffect(() => {
     if (!initialized) {
       setKnownIds(new Set(reports.map((r) => r.id)));
       setInitialized(true);
-      return;
     }
+  }, [reports, initialized]);
 
+  // Enqueue genuinely new reports
+  useEffect(() => {
+    if (!initialized) return;
     const newReports = reports.filter((r) => !knownIds.has(r.id));
-    if (newReports.length > 0) {
-      setKnownIds((prev) => {
-        const next = new Set(prev);
-        newReports.forEach((r) => next.add(r.id));
-        return next;
-      });
-      setPending((prev) => [...prev, ...newReports]);
-    }
+    if (newReports.length === 0) return;
+
+    setKnownIds((prev) => {
+      const next = new Set(prev);
+      newReports.forEach((r) => next.add(r.id));
+      return next;
+    });
+    setItems((prev) => [
+      ...prev,
+      ...newReports.map((r) => ({ report: r, dismissing: false })),
+    ]);
   }, [reports, knownIds, initialized]);
 
-  // Auto-dismiss after 6s
+  // Per-item auto-dismiss: mark dismissing after VISIBLE_MS, remove after fade
   useEffect(() => {
-    if (pending.length === 0) return;
-    const timer = setTimeout(() => {
-      setPending((prev) => prev.slice(1));
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [pending]);
+    const nonDismissing = items.filter((t) => !t.dismissing);
+    if (nonDismissing.length === 0) return;
+
+    const timers = nonDismissing.map((t) => {
+      const fadeTimer = setTimeout(() => {
+        setItems((prev) =>
+          prev.map((x) =>
+            x.report.id === t.report.id ? { ...x, dismissing: true } : x,
+          ),
+        );
+        setTimeout(() => {
+          setItems((prev) => prev.filter((x) => x.report.id !== t.report.id));
+        }, FADE_MS);
+      }, VISIBLE_MS);
+      return fadeTimer;
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, [items]);
 
   const dismiss = useCallback((id: string) => {
-    setPending((prev) => prev.filter((r) => r.id !== id));
+    setItems((prev) =>
+      prev.map((x) => (x.report.id === id ? { ...x, dismissing: true } : x)),
+    );
+    setTimeout(() => {
+      setItems((prev) => prev.filter((x) => x.report.id !== id));
+    }, FADE_MS);
   }, []);
 
-  if (pending.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div className={styles.notifBar}>
-      {pending.slice(0, 2).map((r) => (
+      {items.slice(0, 3).map((t) => (
         <div
-          key={r.id}
-          className={styles.notifItem}
+          key={t.report.id}
+          className={`${styles.notifItem} ${t.dismissing ? styles.notifItemDismissing : ''}`}
           onClick={() => {
-            onClickReport(r.id);
-            dismiss(r.id);
+            onClickReport(t.report.id);
+            dismiss(t.report.id);
           }}
         >
           <span className={styles.notifDot} />
           <span className={styles.notifText}>
-            New: <strong>{r.title || 'Untitled'}</strong>
-            {r.category ? ` — ${r.category}` : ''}
+            New: <strong>{t.report.title || 'Untitled'}</strong>
+            {t.report.category ? ` — ${t.report.category}` : ''}
           </span>
           <button
             className={styles.notifClose}
             onClick={(e) => {
               e.stopPropagation();
-              dismiss(r.id);
+              dismiss(t.report.id);
             }}
           >
             ✕

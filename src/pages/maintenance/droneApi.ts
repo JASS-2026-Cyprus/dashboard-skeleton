@@ -29,11 +29,38 @@ export interface BaseResponse {
   message: string;
 }
 
+export interface DroneStatusResponse {
+  status: 'streaming' | 'no_stream' | 'offline';
+  rtsp_url?: string | null;
+  is_airborne?: boolean;
+  current_position?: [number, number];
+}
+
 async function post<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+
+  if (!res.ok) {
+    let detail: string;
+    try {
+      const json = await res.json();
+      detail = json.detail || json.message || `Error ${res.status}`;
+    } catch {
+      detail = await res.text();
+    }
+    throw new Error(detail);
+  }
+
+  return res.json();
+}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'GET',
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) {
@@ -60,4 +87,8 @@ export function squarePattern(squareSize: number = 1.0): Promise<SquareResponse>
 
 export function returnToBase(): Promise<BaseResponse> {
   return post('/return-to-base');
+}
+
+export function getDroneStatus(): Promise<DroneStatusResponse> {
+  return get('/status');
 }

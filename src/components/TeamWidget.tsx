@@ -34,7 +34,7 @@ export default function TeamWidget({
           </Link>
         )}
       </div>
-      <p className={styles.description}>{description}</p>
+      {description && <p className={styles.description}>{description}</p>}
       {graph}
       <div className={styles.stats}>
         {stats.map((stat) => (

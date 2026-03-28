@@ -28,6 +28,8 @@ services:
     restart: unless-stopped
     depends_on:
       - go2rtc
+    extra_hosts:
+      - "drone-api:192.168.1.109"
 
   go2rtc:
     image: alexxit/go2rtc:latest

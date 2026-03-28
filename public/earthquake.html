@@ -139,6 +139,20 @@
   </div>
 </div>
 
+<!-- Earthquake alert popup -->
+<div id="eq-alert" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(229,57,53,0.15);z-index:9999;display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border:3px solid #e53935;border-radius:16px;padding:30px 40px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.3);max-width:420px;animation:eqShake 0.3s ease-in-out 3">
+    <div style="font-size:48px;margin-bottom:10px">⚠️</div>
+    <div style="font-size:22px;font-weight:700;color:#e53935;margin-bottom:8px">EARTHQUAKE DETECTED</div>
+    <div style="font-size:14px;color:#666;margin-bottom:16px" id="eq-alert-details">PGA: — | Probability: —</div>
+    <div style="font-size:13px;color:#999;margin-bottom:20px">Safety team has been notified. Launch drone to assess damage.</div>
+    <button onclick="document.getElementById('eq-alert').style.display='none'" style="padding:10px 30px;font-size:14px;font-weight:700;background:#e53935;color:#fff;border:none;border-radius:8px;cursor:pointer">OK</button>
+  </div>
+</div>
+<style>
+@keyframes eqShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+</style>
+
 <!-- Photo comparison modal -->
 <div id="photo-modal" class="photo-overlay" style="display:none" onclick="if(event.target===this)closePhotos()">
   <span class="photo-close" onclick="closePhotos()">&times;</span>
@@ -192,18 +206,18 @@ function makeTriangleIcon(color) {
 function addCrackMarker(r) {
     const id = 'crack_'+r.id;
     const c = COLORS[r.severity]||'#999';
-    const isWorsened = r.status === 'worsened' && !r.ui_checked;
-    const photoBtn = r.status === 'worsened' && r.image_url ? `<button onclick="event.stopPropagation();showPhotos('${r.image_before_url||''}','${r.image_url}','${(r.image_name||'').replace(/'/g,'')}')" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:600;background:#378add;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">📷 View Photos</button>` : '';
-    const ackBtn = isWorsened ? `<button onclick="event.stopPropagation();acknowledgeCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#f5a623;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%">👁 ACKNOWLEDGE</button>` : '';
+    const needsAttention = !r.ui_checked; // triangle for ANY unchecked (new or worsened)
+    const statusLabel = r.status==='worsened'?' <span style="color:#e53935;font-weight:700">⚠ WORSENED</span>':' <span style="color:#378add;font-weight:700">NEW</span>';
+    const photoBtn = r.image_url ? `<button onclick="event.stopPropagation();showPhotos('${r.image_before_url||''}','${r.image_url}','${(r.image_name||'').replace(/'/g,'')}')" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:600;background:#378add;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">📷 View Photos</button>` : '';
+    const ackBtn = needsAttention ? `<button onclick="event.stopPropagation();acknowledgeCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#f5a623;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%">👁 ACKNOWLEDGE</button>` : '';
     const fixBtn = `<button onclick="event.stopPropagation();fixCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:6px;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(0,0,0,0.15)">✓ MARK AS FIXED</button>`;
-    const popupHtml = `<b style="color:${c}">${(r.severity||'').toUpperCase()}</b>${isWorsened?' <span style="color:#e53935;font-weight:700">⚠ WORSENED</span>':''}<br>${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm × ${r.max_crack_width_mm||0}mm<br><span style="color:#999;font-size:11px">${r.image_name||''}</span><br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span>${photoBtn}${ackBtn}${fixBtn}`;
+    const popupHtml = `<b style="color:${c}">${(r.severity||'').toUpperCase()}</b>${needsAttention?statusLabel:''}<br>${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm × ${r.max_crack_width_mm||0}mm<br><span style="color:#999;font-size:11px">${r.image_name||''}</span><br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span>${photoBtn}${ackBtn}${fixBtn}`;
 
-    // Remove old marker if exists
     if(crackMarkers[id]) { map.removeLayer(crackMarkers[id]); delete crackMarkers[id]; }
 
     let m;
-    if(isWorsened) {
-        m = L.marker([r.lat, r.lon], {icon: makeTriangleIcon(c), interactive:true}).addTo(map);
+    if(needsAttention) {
+        m = L.marker([r.lat, r.lon], {icon: makeTriangleIcon('#e53935'), interactive:true}).addTo(map);
     } else {
         m = L.circle([r.lat, r.lon], {radius:20, color:c, fillColor:c, fillOpacity:0.5, weight:2}).addTo(map);
     }
@@ -233,13 +247,18 @@ async function acknowledgeCrack(id, dbId) {
 
 function showPhotos(beforeUrl, afterUrl, title) {
     const modal = document.getElementById('photo-modal');
-    document.getElementById('photo-title').textContent = title || 'Crack Comparison';
+    document.getElementById('photo-title').textContent = title || 'Crack Analysis';
     const beforeImg = document.getElementById('photo-before');
     const afterImg = document.getElementById('photo-after');
-    if(beforeUrl && beforeUrl !== 'null' && beforeUrl !== 'undefined') {
-        beforeImg.src = beforeUrl; beforeImg.parentElement.style.display = '';
+    const hasBefore = beforeUrl && beforeUrl !== 'null' && beforeUrl !== 'undefined' && beforeUrl !== '';
+    if(hasBefore) {
+        beforeImg.src = beforeUrl;
+        beforeImg.parentElement.style.display = '';
+        afterImg.parentElement.querySelector('.label').textContent = 'After';
     } else {
-        beforeImg.src = ''; beforeImg.parentElement.style.display = 'none';
+        beforeImg.src = '';
+        beforeImg.parentElement.style.display = 'none';
+        afterImg.parentElement.querySelector('.label').textContent = 'Crack Photo';
     }
     afterImg.src = afterUrl;
     modal.style.display = 'flex';
@@ -284,6 +303,15 @@ const chartProb = new Chart(document.getElementById('chart-prob'),{type:'bar',da
 
 let droneData=[], sensorConnected=false;
 
+function updateDamageCounts(){
+    let total=droneData.length+crackData.length;
+    let critical=0;
+    for(const r of droneData){if(r.severity==='critical')critical++;}
+    for(const r of crackData){if(r.severity==='critical')critical++;}
+    document.getElementById('damage-count').textContent=total;
+    document.getElementById('critical-count').textContent=critical;
+}
+
 async function fetchLive() {
     try {
         const rows = await sbGet('sensor_stream','&limit=1');
@@ -311,15 +339,25 @@ async function fetchLive() {
         }
 
         const prob=d.prob||0, pga=d.pga||0, isEq=d.label==='EARTHQUAKE';
-        document.getElementById('lstm-status').textContent=isEq?'EARTHQUAKE':'QUIET';
-        document.getElementById('lstm-status').className='value '+(isEq?'red':'green');
+
+        // Keep status red for 10 sec after earthquake (matches buzzer duration)
+        if(isEq) window._lastEqTime=Date.now();
+        const showRed = isEq || (window._lastEqTime && (Date.now()-window._lastEqTime)<10000);
+
+        document.getElementById('lstm-status').textContent=showRed?'EARTHQUAKE':'QUIET';
+        document.getElementById('lstm-status').className='value '+(showRed?'red':'green');
         document.getElementById('lstm-prob').textContent=(prob*100).toFixed(1)+'%';
-        document.getElementById('lstm-prob').style.color=isEq?'var(--red)':'var(--green)';
+        document.getElementById('lstm-prob').style.color=showRed?'var(--red)':'var(--green)';
         document.getElementById('pga-value').textContent=pga.toFixed(3)+'g';
         document.getElementById('pga-value').style.color=pga>0.1?'var(--red)':'var(--text)';
 
+        // Earthquake popup alert — show for each new earthquake
+        if(isEq){
+            showEqAlert(pga,prob);
+        }
+
         if(isEq&&!window._droneActive){
-            activateDroneBtn(180);
+            activateDroneBtn(600);
         }
     } catch(e){sensorConnected=false;}
 }
@@ -332,11 +370,25 @@ async function fetchHistory() {
         return `<div class="event"><span class="badge earthquake">EQ</span> P=${((r.probability||0)*100).toFixed(0)}% PGA=${(r.pga_g||0).toFixed(3)}g<div class="time">${t}</div></div>`;
     }).join('');
 
-    // Activate drone button if newest earthquake is < 180 sec old
+    // Check newest earthquake from DB
     const newest = rows[0];
     const ageSec = (Date.now() - new Date(newest.created_at).getTime()) / 1000;
-    if(ageSec < 180 && !window._droneActive){
-        activateDroneBtn(Math.ceil(180 - ageSec));
+
+    // Keep LSTM status red if earthquake < 10 sec ago (matches buzzer)
+    if(ageSec < 10) {
+        window._lastEqTime = Date.now() - ageSec*1000;
+        document.getElementById('lstm-status').textContent='EARTHQUAKE';
+        document.getElementById('lstm-status').className='value red';
+    }
+    // Show popup for new earthquakes not yet shown
+    const newestEpoch = newest.epoch || (new Date(newest.created_at).getTime()/1000);
+    if(ageSec < 10 && newestEpoch !== window._lastShownEqEpoch) {
+        window._lastShownEqEpoch = newestEpoch;
+        showEqAlert(newest.pga_g||0, newest.probability||0);
+    }
+
+    if(ageSec < 600 && !window._droneActive){
+        activateDroneBtn(Math.ceil(600 - ageSec));
     }
 }
 
@@ -344,11 +396,9 @@ async function fetchDrone() {
     const rows = await sbGet('drone_reports');
     if(!rows.length) return;
     droneData=rows;
-    let total=0,critical=0;
-    for(const r of droneData){addMarker(r);total++;if(r.severity==='critical')critical++;}
-    document.getElementById('damage-count').textContent=total;
-    document.getElementById('critical-count').textContent=critical;
-    if(total>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${total} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
+    for(const r of droneData){addMarker(r);}
+    updateDamageCounts();
+    if(droneData.length>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${droneData.length} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
     document.getElementById('drone-log').innerHTML=droneData.slice(0,15).map(r=>{
         const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
         const rid=r.event_id||r.id;
@@ -368,10 +418,7 @@ async function fixDamage(id){
     await fetch(`${SB_URL}/rest/v1/drone_reports?id=eq.${id}`,{method:'DELETE',headers:SB_H});
     if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
     droneData=droneData.filter(r=>(r.event_id||r.id)!=id);
-    let total=0,critical=0;
-    for(const r of droneData){total++;if(r.severity==='critical')critical++;}
-    document.getElementById('damage-count').textContent=total;
-    document.getElementById('critical-count').textContent=critical;
+    updateDamageCounts();
     map.closePopup();
     fetchDrone();
 }
@@ -382,12 +429,19 @@ async function fetchCracks() {
     // Don't redraw markers if a popup is open — user is interacting
     if(map._popup && map._popup.isOpen()) return;
 
-    const rows = await sbGet('crack_reports');
-    if(!rows.length) { document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>'; return; }
+    const rows = await sbGet('crack_reports','&limit=50');
+    // Only show cracks that actually have a crack
+    const withCrack = rows.filter(r => r.has_crack === true);
+    if(!withCrack.length) {
+        crackData = [];
+        updateDamageCounts();
+        document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>';
+        return;
+    }
 
     // Group by coordinate (round to 4 decimals) — keep only latest per location
     const byCoord = {};
-    for(const r of rows) {
+    for(const r of withCrack) {
         const key = (r.lat?.toFixed(4)||'0')+'_'+(r.lon?.toFixed(4)||'0');
         if(!byCoord[key] || new Date(r.created_at) > new Date(byCoord[key].created_at)) {
             byCoord[key] = r;
@@ -400,14 +454,16 @@ async function fetchCracks() {
     Object.keys(crackMarkers).forEach(k => delete crackMarkers[k]);
 
     for(const r of crackData) { if(r.lat && r.lon) addCrackMarker(r); }
+    updateDamageCounts();
 
     document.getElementById('crack-log').innerHTML = crackData.slice(0,10).map(r => {
         const t = r.created_at ? new Date(r.created_at).toLocaleTimeString() : '—';
         const sev = r.severity || 'low';
         const id = 'crack_'+r.id;
-        const isW = r.status === 'worsened' && !r.ui_checked;
-        return `<div class="event" style="cursor:pointer${isW?';border-left:3px solid #e53935':''}" onclick="flyToCrack(${r.lat},${r.lon},'${id}')">
-            <span class="badge ${sev}">${sev}</span>${isW?' <span style="color:#e53935;font-size:10px;font-weight:700">⚠ WORSENED</span>':''}
+        const unchecked = !r.ui_checked;
+        const label = r.status==='worsened'?'⚠ WORSENED':'🆕 NEW';
+        return `<div class="event" style="cursor:pointer${unchecked?';border-left:3px solid #e53935':''}" onclick="flyToCrack(${r.lat},${r.lon},'${id}')">
+            <span class="badge ${sev}">${sev}</span>${unchecked?` <span style="color:#e53935;font-size:10px;font-weight:700">${label}</span>`:''}
             ${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm
             <span style="color:var(--text2)">${r.image_name||''}</span>
             <div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div>
@@ -423,10 +479,15 @@ function updateStatus(){
     document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} | Cracks: ${crackData.length} | ${now}`;
 }
 
+function showEqAlert(pga,prob){
+    document.getElementById('eq-alert-details').textContent=`PGA: ${pga.toFixed(3)}g | Probability: ${(prob*100).toFixed(1)}%`;
+    document.getElementById('eq-alert').style.display='flex';
+}
+
 function activateDroneBtn(seconds){
     // Don't activate if drone was already launched for this earthquake
     const launchedAt = parseInt(localStorage.getItem('drone_launched_at')||'0');
-    if(Date.now() - launchedAt < 180000) return;
+    if(Date.now() - launchedAt < 600000) return;
     window._droneActive=true;
     window._droneEnd=Date.now()+seconds*1000;
     const btn=document.getElementById('launch-drone-btn');
@@ -452,8 +513,8 @@ async function launchDrone(){
     // Remember launch so button stays disabled after refresh
     localStorage.setItem('drone_launched_at', Date.now().toString());
     try{
-        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://localhost:5050';
-        const r=await fetch(url+'/pipeline/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
+        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://10.10.8.134:5050';
+        const r=await fetch(url+'/pipeline/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
         if(r.ok){btn.textContent='DRONE LAUNCHED';btn.style.background='#639922';
             document.getElementById('drone-status-text').textContent='Scanning...';
             document.getElementById('drone-status-text').style.color='#f5a623';
@@ -463,7 +524,7 @@ async function launchDrone(){
     setTimeout(()=>{btn.textContent='LAUNCH DRONE';btn.style.background='#e53935';btn.style.opacity='1';btn.disabled=false;},5000);
 }
 
-async function pollFast(){await fetchLive();updateStatus();}
+async function pollFast(){await fetchLive();updateDamageCounts();updateStatus();}
 async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone(),fetchCracks()]);}
 
 pollFast();pollSlow();
