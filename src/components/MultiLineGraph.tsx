@@ -15,7 +15,7 @@ interface MultiLineGraphProps {
 }
 
 // Layout
-const VW = 440;
+const VW = 840;
 const VH = 150;
 const M = { top: 10, right: 44, bottom: 24, left: 38 };
 const CW = VW - M.left - M.right;
