@@ -355,6 +355,56 @@
   color: var(--color-text-primary);
 }
 
+.pillGroup {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 5px 14px;
+  border: 0.5px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.pill:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.pillActive {
+  background: var(--color-text-primary);
+  color: var(--color-bg-primary);
+  border-color: var(--color-text-primary);
+}
+
+.pillActive:hover {
+  background: var(--color-text-primary);
+  color: var(--color-bg-primary);
+}
+
+.customRange {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dateInput {
+  padding: 5px 10px;
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
 .reportCard {
   border: 0.5px solid var(--color-border);
   border-radius: var(--border-radius);
