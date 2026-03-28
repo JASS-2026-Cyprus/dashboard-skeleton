@@ -90,11 +90,15 @@ export default function MaintenancePage() {
       </div>
 
       <div className={styles.tabContent}>
-        {activeTab === 'analysis' && <AnalysisTab />}
-        {activeTab === 'reports' && (
+        <div style={{ display: activeTab === 'analysis' ? undefined : 'none' }}>
+          <AnalysisTab />
+        </div>
+        <div style={{ display: activeTab === 'reports' ? undefined : 'none' }}>
           <ReportsTab reports={reports} onStartAnalysis={handleStartAnalysisFromReport} />
-        )}
-        {activeTab === 'dashboard' && <DashboardTab reports={reports} />}
+        </div>
+        <div style={{ display: activeTab === 'dashboard' ? undefined : 'none' }}>
+          <DashboardTab reports={reports} />
+        </div>
       </div>
     </div>
   );
