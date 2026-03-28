@@ -123,10 +123,15 @@
       </div>
     </div>
     <button id="launch-drone-btn" onclick="launchDrone()" disabled style="
-      width:100%;padding:12px;margin-bottom:10px;
+      width:100%;padding:12px;margin-bottom:6px;
       background:#555;color:#999;border:none;border-radius:8px;
       font-size:14px;font-weight:700;cursor:not-allowed;letter-spacing:0.5px;
     ">LAUNCH DRONE</button>
+    <button onclick="regularScan(this)" style="
+      width:100%;padding:10px;margin-bottom:10px;
+      background:#378add;color:#fff;border:none;border-radius:8px;
+      font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.5px;
+    ">REGULAR SCAN</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div class="stat"><div class="label">Damage Zones</div><div class="value" id="damage-count">0</div></div>
       <div class="stat"><div class="label">Critical</div><div class="value red" id="critical-count">0</div></div>
@@ -510,13 +515,25 @@ function activateDroneBtn(seconds){
     },1000);
 }
 
+async function regularScan(btn){
+    const orig=btn.textContent;
+    btn.textContent='SCANNING...';btn.style.opacity='0.5';btn.disabled=true;
+    try{
+        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://192.168.1.139:5050';
+        const r=await fetch(url+'/pipeline/start',{method:'POST',headers:{'Content-Type':'application/json'}});
+        if(r.ok){btn.textContent='SCAN STARTED';btn.style.background='#639922';}
+        else{btn.textContent='FAILED';btn.style.background='#f5a623';}
+    }catch(e){btn.textContent='OFFLINE';btn.style.background='#f5a623';}
+    setTimeout(()=>{btn.textContent=orig;btn.style.background='#378add';btn.style.opacity='1';btn.disabled=false;},5000);
+}
+
 async function launchDrone(){
     const btn=document.getElementById('launch-drone-btn');
     btn.textContent='LAUNCHING...';btn.style.opacity='0.5';btn.disabled=true;
     // Remember launch so button stays disabled after refresh
     localStorage.setItem('drone_launched_at', Date.now().toString());
     try{
-        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://10.10.8.134:5050';
+        const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://192.168.1.139:5050';
         const r=await fetch(url+'/pipeline/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:'drone_scan'})});
         if(r.ok){btn.textContent='DRONE LAUNCHED';btn.style.background='#639922';
             document.getElementById('drone-status-text').textContent='Scanning...';
