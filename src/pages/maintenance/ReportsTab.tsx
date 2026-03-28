@@ -77,15 +77,6 @@ export default function ReportsTab({ reports }: Props) {
     }
   }, [activeReportId, waypoint]);
 
-  const handleFootageReady = useCallback(
-    (file: File) => {
-      if (activeReportId) {
-        onStartAnalysis(file, activeReportId);
-      }
-    },
-    [activeReportId, onStartAnalysis],
-  );
-
   const isFiltered = priorityFilter !== '' || statusFilter !== '';
 
   return (
