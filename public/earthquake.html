@@ -520,7 +520,7 @@ async function regularScan(btn){
     btn.textContent='SCANNING...';btn.style.opacity='0.5';btn.disabled=true;
     try{
         const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://192.168.1.139:5050';
-        const r=await fetch(url+'/pipeline/start?mode=simulate',{method:'POST'});
+        const r=await fetch(url+'/pipeline/start',{method:'POST'});
         if(r.ok){btn.textContent='SCAN STARTED';btn.style.background='#639922';}
         else{btn.textContent='FAILED';btn.style.background='#f5a623';}
     }catch(e){btn.textContent='OFFLINE';btn.style.background='#f5a623';}
@@ -534,7 +534,7 @@ async function launchDrone(){
     localStorage.setItem('drone_launched_at', Date.now().toString());
     try{
         const url=localStorage.getItem('ORCHESTRATOR_URL')||'http://192.168.1.139:5050';
-        const r=await fetch(url+'/pipeline/start?mode=simulate',{method:'POST'});
+        const r=await fetch(url+'/pipeline/start',{method:'POST'});
         if(r.ok){btn.textContent='DRONE LAUNCHED';btn.style.background='#639922';
             document.getElementById('drone-status-text').textContent='Scanning...';
             document.getElementById('drone-status-text').style.color='#f5a623';
