@@ -488,9 +488,9 @@ function showEqAlert(pga,prob){
 }
 
 function activateDroneBtn(seconds){
-    // Don't activate if drone was already launched for this earthquake
+    // Don't activate if drone was already launched for this earthquake (within last 60s)
     const launchedAt = parseInt(localStorage.getItem('drone_launched_at')||'0');
-    if(Date.now() - launchedAt < 600000) return;
+    if(Date.now() - launchedAt < 60000) return;
     window._droneActive=true;
     window._droneEnd=Date.now()+seconds*1000;
     const btn=document.getElementById('launch-drone-btn');
