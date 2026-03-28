@@ -17,11 +17,6 @@ export default function MaintenancePage() {
     return unsub;
   }, []);
 
-  const handleStartAnalysisFromReport = useCallback((_file: File, _reportId: string) => {
-    // Switch to analysis tab — the AnalysisTab manages its own state
-    setActiveTab('analysis');
-  }, []);
-
   const handleToastClick = useCallback((reportId: string) => {
     setActiveTab('reports');
     // ReportsTab will handle selection via its own state
@@ -47,7 +42,7 @@ export default function MaintenancePage() {
       <div className={styles.tabContent}>
         {activeTab === 'analysis' && <AnalysisTab />}
         {activeTab === 'reports' && (
-          <ReportsTab reports={reports} onStartAnalysis={handleStartAnalysisFromReport} />
+          <ReportsTab reports={reports} />
         )}
         {activeTab === 'dashboard' && <DashboardTab reports={reports} />}
       </div>

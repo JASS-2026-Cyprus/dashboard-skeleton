@@ -1,5 +1,4 @@
 import { useBlackboardSummary } from '../hooks/useBlackboardSummary';
-import { useExecutiveBriefing } from '../hooks/useExecutiveBriefing';
 import styles from './SystemSummary.module.css';
 
 const SEVERITY_CONFIG = {
@@ -14,51 +13,48 @@ const TREND_CONFIG = {
   escalating: { icon: '\u2198', label: 'Escalating', cls: styles.trendEscalating },
 } as const;
 
-function timeAgo(date: Date): string {
-  const s = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (s < 10) return '<10s ago';
-  if (s < 60) return `${s}s ago`;
-  return `${Math.floor(s / 60)}m ago`;
-}
-
 export default function SystemSummary() {
   const { summary, loading } = useBlackboardSummary();
-  const { briefing, briefingLoading } = useExecutiveBriefing(summary, loading);
 
-  const isLoading = loading || briefingLoading;
-  const sev = briefing ? SEVERITY_CONFIG[briefing.severity] : SEVERITY_CONFIG.ok;
-  const trend = briefing ? TREND_CONFIG[briefing.trend] : TREND_CONFIG.stable;
+  const sev = summary?.severity ? SEVERITY_CONFIG[summary.severity] : null;
+  const trend = summary?.trend ? TREND_CONFIG[summary.trend] : null;
+  // undefined = field not yet in data; [] = backend explicitly says no alerts
+  const alerts = summary?.active_alerts;
 
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <h2 className={styles.title}>Executive Briefing</h2>
         <div className={styles.headerMeta}>
-          {briefing && !isLoading && (
-            <span className={styles.metaText}>
-              {briefing.entry_count} sources &middot; {timeAgo(briefing.updated_at)}
+          {sev && (
+            <span className={`${styles.badge} ${sev.cls}`}>
+              {loading ? 'Updating…' : `${sev.icon} ${sev.label}`}
             </span>
           )}
-          <span className={`${styles.badge} ${briefing ? sev.cls : ''}`}>
-            {isLoading ? 'Updating\u2026' : `${sev.icon} ${sev.label}`}
-          </span>
+          {loading && !sev && (
+            <span className={styles.badge}>Updating…</span>
+          )}
         </div>
       </div>
       <div className={styles.grid}>
         {/* Card 1: City Status */}
         <div className={styles.summaryCard}>
           <h3 className={styles.summaryLabel}>City Status</h3>
-          {isLoading ? (
+          {loading ? (
             <div className={styles.skeleton} />
           ) : (
             <>
               <div className={styles.statusLine}>
-                <span className={styles.statusIcon}>{sev.icon}</span>
-                <span className={styles.summaryValue}>{briefing?.status}</span>
+                {sev && <span className={styles.statusIcon}>{sev.icon}</span>}
+                <span className={styles.summaryValue}>
+                  {summary?.status ?? '—'}
+                </span>
               </div>
-              <div className={`${styles.trendBadge} ${trend.cls}`}>
-                {trend.icon} {trend.label}
-              </div>
+              {trend && (
+                <div className={`${styles.trendBadge} ${trend.cls}`}>
+                  {trend.icon} {trend.label}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -66,10 +62,12 @@ export default function SystemSummary() {
         {/* Card 2: Recommended Action */}
         <div className={styles.summaryCard}>
           <h3 className={styles.summaryLabel}>Recommended Action</h3>
-          {isLoading ? (
+          {loading ? (
             <div className={styles.skeleton} />
           ) : (
-            <p className={styles.summaryValue}>{briefing?.recommended_action}</p>
+            <p className={styles.summaryValue}>
+              {summary?.recommended_action ?? '—'}
+            </p>
           )}
         </div>
 
@@ -77,17 +75,19 @@ export default function SystemSummary() {
         <div className={styles.summaryCard}>
           <h3 className={styles.summaryLabel}>
             Active Alerts
-            {briefing && !isLoading && briefing.active_alerts.length > 0 && (
-              <span className={styles.alertCount}>{briefing.active_alerts.length}</span>
+            {!loading && alerts && alerts.length > 0 && (
+              <span className={styles.alertCount}>{alerts.length}</span>
             )}
           </h3>
-          {isLoading ? (
+          {loading ? (
             <div className={styles.skeleton} />
-          ) : briefing?.active_alerts.length === 0 ? (
+          ) : alerts === undefined ? (
+            <p className={styles.noAlerts}>—</p>
+          ) : alerts.length === 0 ? (
             <p className={styles.noAlerts}>No active alerts</p>
           ) : (
             <div className={styles.alertList}>
-              {briefing?.active_alerts.map((a, i) => (
+              {alerts.map((a, i) => (
                 <div key={i} className={styles.alertItem}>
                   <div className={styles.alertTop}>
                     <span className={styles.alertTeam}>{a.team}</span>

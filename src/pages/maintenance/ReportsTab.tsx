@@ -24,10 +24,9 @@ function sevOrder(s: string) {
 
 interface Props {
   reports: Report[];
-  onStartAnalysis: (file: File, reportId: string) => void;
 }
 
-export default function ReportsTab({ reports, onStartAnalysis }: Props) {
+export default function ReportsTab({ reports }: Props) {
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -79,15 +78,6 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
       setDispatching(false);
     }
   }, [activeReportId, waypoint]);
-
-  const handleFootageReady = useCallback(
-    (file: File) => {
-      if (activeReportId) {
-        onStartAnalysis(file, activeReportId);
-      }
-    },
-    [activeReportId, onStartAnalysis],
-  );
 
   return (
     <div className={styles.splitLayout}>
@@ -214,7 +204,7 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
               </>
             )}
 
-            {missionActive && <DroneDispatch onFootageReady={handleFootageReady} />}
+            {missionActive && <DroneDispatch />}
           </div>
         ) : (
           <div className={styles.empty}>Select a report to view details</div>
