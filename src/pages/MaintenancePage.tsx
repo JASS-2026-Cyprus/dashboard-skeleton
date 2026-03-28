@@ -55,10 +55,6 @@ export default function MaintenancePage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const { reports } = useMaintenanceReports();
 
-  const handleStartAnalysisFromReport = useCallback((_file: File, _reportId: string) => {
-    setActiveTab('analysis');
-  }, []);
-
   const handleToastClick = useCallback((reportId: string) => {
     setActiveTab('reports');
     void reportId;
@@ -94,7 +90,7 @@ export default function MaintenancePage() {
           <AnalysisTab />
         </div>
         <div style={{ display: activeTab === 'reports' ? undefined : 'none' }}>
-          <ReportsTab reports={reports} onStartAnalysis={handleStartAnalysisFromReport} />
+          <ReportsTab reports={reports} />
         </div>
         <div style={{ display: activeTab === 'dashboard' ? undefined : 'none' }}>
           <DashboardTab reports={reports} />
