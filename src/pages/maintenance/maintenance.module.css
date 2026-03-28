@@ -1189,6 +1189,60 @@
   font-family: 'SF Mono', monospace;
 }
 
+.swarmStatusBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 0.75rem;
+  font-size: 12px;
+  transition: background 0.4s, color 0.4s;
+}
+
+.swarmStatusBar[data-status='waiting'],
+.swarmStatusBar[data-status='polling'] {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+.swarmStatusBar[data-status='fresh'] {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.swarmSpinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.swarmDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-green-text);
+  flex-shrink: 0;
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+.swarmText {
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+
+.swarmCountdown {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
 .logsLoading {
   display: flex;
   align-items: center;
