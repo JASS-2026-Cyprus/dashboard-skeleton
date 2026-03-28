@@ -74,6 +74,8 @@ function EarthquakeWidget({ events }: { events: EqEvent[] }) {
       border: '0.5px solid #e0e0e0',
       borderRadius: 12,
       padding: '1.25rem',
+      overflowY: 'auto',
+      alignSelf: 'stretch',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
