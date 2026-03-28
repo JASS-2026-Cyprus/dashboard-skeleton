@@ -319,14 +319,7 @@ async function fetchLive() {
         document.getElementById('pga-value').style.color=pga>0.1?'var(--red)':'var(--text)';
 
         if(isEq&&!window._droneActive){
-            window._droneActive=true;
-            const btn=document.getElementById('launch-drone-btn');
-            btn.disabled=false;btn.style.background='#e53935';btn.style.color='#fff';btn.style.cursor='pointer';
-            clearTimeout(window._droneTimer);
-            window._droneTimer=setTimeout(()=>{
-                btn.disabled=true;btn.style.background='#555';btn.style.color='#999';btn.style.cursor='not-allowed';
-                window._droneActive=false;
-            },20000);
+            activateDroneBtn(180);
         }
     } catch(e){sensorConnected=false;}
 }
@@ -339,19 +332,11 @@ async function fetchHistory() {
         return `<div class="event"><span class="badge earthquake">EQ</span> P=${((r.probability||0)*100).toFixed(0)}% PGA=${(r.pga_g||0).toFixed(3)}g<div class="time">${t}</div></div>`;
     }).join('');
 
-    // Activate drone button if newest earthquake is < 20 sec old
+    // Activate drone button if newest earthquake is < 180 sec old
     const newest = rows[0];
     const ageSec = (Date.now() - new Date(newest.created_at).getTime()) / 1000;
-    if(ageSec < 20 && !window._droneActive){
-        window._droneActive=true;
-        const btn=document.getElementById('launch-drone-btn');
-        btn.disabled=false;btn.style.background='#e53935';btn.style.color='#fff';btn.style.cursor='pointer';
-        clearTimeout(window._droneTimer);
-        const remaining = Math.max(1000, (20 - ageSec) * 1000);
-        window._droneTimer=setTimeout(()=>{
-            btn.disabled=true;btn.style.background='#555';btn.style.color='#999';btn.style.cursor='not-allowed';
-            window._droneActive=false;
-        }, remaining);
+    if(ageSec < 180 && !window._droneActive){
+        activateDroneBtn(Math.ceil(180 - ageSec));
     }
 }
 
@@ -436,6 +421,26 @@ function flyToCrack(lat,lon,id){map.flyTo([lat,lon],18,{duration:0.8});if(crackM
 function updateStatus(){
     const now=new Date().toLocaleTimeString();
     document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} | Cracks: ${crackData.length} | ${now}`;
+}
+
+function activateDroneBtn(seconds){
+    window._droneActive=true;
+    window._droneEnd=Date.now()+seconds*1000;
+    const btn=document.getElementById('launch-drone-btn');
+    btn.disabled=false;btn.style.background='#e53935';btn.style.color='#fff';btn.style.cursor='pointer';
+    clearInterval(window._droneTick);
+    window._droneTick=setInterval(()=>{
+        const left=Math.ceil((window._droneEnd-Date.now())/1000);
+        if(left<=0){
+            clearInterval(window._droneTick);
+            btn.disabled=true;btn.style.background='#555';btn.style.color='#999';btn.style.cursor='not-allowed';
+            btn.textContent='LAUNCH DRONE';
+            window._droneActive=false;
+            return;
+        }
+        const m=Math.floor(left/60), s=left%60;
+        btn.textContent=`LAUNCH DRONE (${m}:${s<10?'0'+s:s})`;
+    },1000);
 }
 
 async function launchDrone(){
