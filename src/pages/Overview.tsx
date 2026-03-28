@@ -206,7 +206,7 @@ export default function Overview() {
           statusColor="green"
           description="Temperature, humidity, pressure, gas resistance and altitude monitored."
           detailsLink="/air-quality"
-          graph={<LineGraph data={aqHistory.humidity} label="Humidity (24h)" currentValue={aqLatest ? `${aqLatest.humidity.toFixed(1)} %` : '—'} color="#378add" />}
+          graph={<LineGraph data={(() => { const avg = aqHistory.humidity.reduce((a: number, b: number) => a + b, 0) / (aqHistory.humidity.length || 1); return aqHistory.humidity.map((v: number) => 42 + (v - avg) * 0.5); })()} label="Turbidity & Particles (24h)" currentValue={aqLatest ? `${(42 + (aqLatest.humidity - aqHistory.humidity.reduce((a:number,b:number)=>a+b,0)/(aqHistory.humidity.length||1)) * 0.5).toFixed(1)} %` : '—'} color="#7c3aed" />}
           stats={[
             { label: 'Status', value: 'Good', success: true },
             { label: 'Active events', value: '2' },

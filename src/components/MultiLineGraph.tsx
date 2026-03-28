@@ -121,16 +121,6 @@ export default function MultiLineGraph({ series, title }: MultiLineGraphProps) {
               </text>
             );
           })}
-          {rightSeries.length > 0 && (
-            <text
-              x={CW + 38} y={CH / 2}
-              textAnchor="middle" fontSize="7.5" fill={rightSeries[0].color}
-              fontFamily="inherit" opacity="0.8"
-              transform={`rotate(90, ${CW + 38}, ${CH / 2})`}
-            >
-              mg/m³
-            </text>
-          )}
 
           {/* Baseline */}
           <line x1={0} y1={CH} x2={CW} y2={CH} stroke="var(--color-border)" strokeWidth="0.5" />

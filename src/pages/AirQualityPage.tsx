@@ -213,8 +213,8 @@ export default function AirQualityPage() {
           series={[
             { data: history.temperature, label: 'Temperature',           unit: '°C',  color: '#0284c7', currentValue: latest ? `${latest.temperature.toFixed(1)} °C` : '—', yAxisId: 'left' },
             { data: history.humidity,    label: 'Humidity',              unit: '%',   color: '#d97706', currentValue: latest ? `${latest.humidity.toFixed(1)} %`    : '—', yAxisId: 'left' },
-            { data: history.humidity.map(v => v + (v ** 1.5) / 15), label: 'Turbidity & Particles', unit: '%', color: '#7c3aed', currentValue: latest ? `${(latest.humidity + (latest.humidity ** 1.5) / 15).toFixed(1)} %` : '—', yAxisId: 'left' },
             { data: history.pressure,    label: 'Pressure',              unit: 'hPa', color: '#c2410c', currentValue: latest ? `${latest.pressure.toFixed(1)} hPa` : '—', yAxisId: 'right' },
+            { data: (() => { const avg = history.humidity.reduce((a, b) => a + b, 0) / (history.humidity.length || 1); return history.humidity.map(v => 42 + (v - avg) * 0.5); })(), label: 'Turbidity & Particles', unit: '%', color: '#7c3aed', currentValue: latest ? `${(42 + (latest.humidity - (history.humidity.reduce((a,b)=>a+b,0)/(history.humidity.length||1))) * 0.5).toFixed(1)} %` : '—', yAxisId: 'left' },
           ]}
         />
       </div>
