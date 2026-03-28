@@ -185,9 +185,9 @@ export default function Overview() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <>
       <SystemSummary />
-      <div className="grid" style={{ flex: 1, minHeight: 0 }}>
+      <div className="grid">
         <TeamWidget
           title="Maintenance"
           status="On track"
@@ -246,6 +246,6 @@ export default function Overview() {
         />
         <EarthquakeWidget events={eqEvents} />
       </div>
-    </div>
+    </>
   );
 }
