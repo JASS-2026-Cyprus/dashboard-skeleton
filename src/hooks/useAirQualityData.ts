@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { getSubsystemBackendUrl } from '../config';
 
 export interface AirQualityLatest {
   temperature: number;
@@ -47,9 +46,9 @@ export interface AirQualityData {
 }
 
 const FALLBACK_HISTORY: AirQualityHistory = { temperature: [], humidity: [], pressure: [] };
+const backendUrl = "http://192.168.1.166:38000"
 
 async function fetchSensorData(): Promise<{ latest: AirQualityLatest | null; history: AirQualityHistory }> {
-  const backendUrl = getSubsystemBackendUrl('airQuality');
   const res = await fetch(`${backendUrl}/api/sensor-data`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const readings: AirQualityLatest[] = await res.json();
@@ -74,14 +73,12 @@ async function fetchSensorData(): Promise<{ latest: AirQualityLatest | null; his
 }
 
 async function fetchAlertStatus(): Promise<AlertStatus> {
-  const backendUrl = getSubsystemBackendUrl('airQuality');
   const res = await fetch(`${backendUrl}/api/alert-status`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function fetchEvents(): Promise<AirQualityEvent[]> {
-  const backendUrl = getSubsystemBackendUrl('airQuality');
   const res = await fetch(`${backendUrl}/api/events/live`);
   if (!res.ok) return [];
   const data = await res.json();
