@@ -357,7 +357,7 @@ async function fetchLive() {
         }
 
         if(isEq&&!window._droneActive){
-            activateDroneBtn(180);
+            activateDroneBtn(600);
         }
     } catch(e){sensorConnected=false;}
 }
@@ -387,8 +387,8 @@ async function fetchHistory() {
         showEqAlert(newest.pga_g||0, newest.probability||0);
     }
 
-    if(ageSec < 180 && !window._droneActive){
-        activateDroneBtn(Math.ceil(180 - ageSec));
+    if(ageSec < 600 && !window._droneActive){
+        activateDroneBtn(Math.ceil(600 - ageSec));
     }
 }
 
@@ -480,7 +480,7 @@ function showEqAlert(pga,prob){
 function activateDroneBtn(seconds){
     // Don't activate if drone was already launched for this earthquake
     const launchedAt = parseInt(localStorage.getItem('drone_launched_at')||'0');
-    if(Date.now() - launchedAt < 180000) return;
+    if(Date.now() - launchedAt < 600000) return;
     window._droneActive=true;
     window._droneEnd=Date.now()+seconds*1000;
     const btn=document.getElementById('launch-drone-btn');
