@@ -37,7 +37,82 @@ function getAltitudeStatus(v: number) {
   return { color: '#0284c7', level: 'High' };
 }
 
+// ── Advice generation ─────────────────────────────────────────────────────────
+
+// interface AdviceItem {
+//   id: string;
+//   level: 'info' | 'warning' | 'danger';
+//   title: string;
+//   message: string;
+// }
+//
+// interface LatestReadings {
+//   temperature: number;
+//   humidity: number;
+//   pressure: number;
+//   gas_resistance: number;
+//   altitude: number;
+// }
+
+
+// function generateAdvice(r: LatestReadings): AdviceItem[] {
+//   const items: AdviceItem[] = [];
+//
+//   if (r.temperature > 35) {
+//     items.push({
+//       id: 'temp-high', level: 'danger',
+//       title: 'High Temperature',
+//       message: `Temperature at ${r.temperature.toFixed(1)} °C — avoid prolonged outdoor exposure.`,
+//     });
+//   } else if (r.temperature < 10) {
+//     items.push({
+//       id: 'temp-low', level: 'warning',
+//       title: 'Low Temperature',
+//       message: `Temperature at ${r.temperature.toFixed(1)} °C — dress warmly outdoors.`,
+//     });
+//   }
+//
+//   if (r.humidity > 80) {
+//     items.push({
+//       id: 'humidity-high', level: 'warning',
+//       title: 'High Humidity',
+//       message: `Humidity at ${r.humidity.toFixed(1)}% — uncomfortable conditions, possible condensation.`,
+//     });
+//   } else if (r.humidity < 30) {
+//     items.push({
+//       id: 'humidity-low', level: 'warning',
+//       title: 'Low Humidity',
+//       message: `Humidity at ${r.humidity.toFixed(1)}% — dry air may cause discomfort.`,
+//     });
+//   }
+//
+//   if (r.gas_resistance < 100) {
+//     items.push({
+//       id: 'gas-poor', level: 'danger',
+//       title: 'Poor Air Quality (Gas)',
+//       message: `Gas resistance at ${r.gas_resistance.toFixed(1)} kΩ — elevated VOC levels detected.`,
+//     });
+//   }
+//
+//   if (items.length === 0) {
+//     items.push({
+//       id: 'all-clear', level: 'info',
+//       title: 'Conditions Normal',
+//       message: 'All sensor readings are within acceptable limits. No active alerts.',
+//     });
+//   }
+//
+//   return items;
+// }
+
+
 // ── Component ─────────────────────────────────────────────────────────────────
+
+// const ADVICE_CLASS: Record<string, string> = {
+//   info: styles.adviceInfo,
+//   warning: styles.adviceWarning,
+//   danger: styles.adviceDanger,
+// };
 
 export default function AirQualityPage() {
   const { latest, history, events, alertStatus, loading, error, lastUpdated } = useAirQualityData();
