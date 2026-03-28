@@ -26,6 +26,7 @@ ChartJS.register(
   Legend,
   Filler
 );
+
 const PRESETS = [
   { label: 'Today', days: 1 },
   { label: '7 d', days: 7 },
@@ -55,7 +56,7 @@ interface Props {
 }
 
 export default function DashboardTab({ reports }: Props) {
-  const [activeDays, setActiveDays] = useState(0); // 0 = all
+  const [activeDays, setActiveDays] = useState(7);
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [showCustom, setShowCustom] = useState(false);
@@ -79,6 +80,7 @@ export default function DashboardTab({ reports }: Props) {
   const rPending = filtered.filter((r) => r.status === 'pending').length;
   const rProgress = filtered.filter((r) => r.status === 'in_progress').length;
   const rResolved = filtered.filter((r) => r.status === 'resolved').length;
+  const rHigh = filtered.filter((r) => r.severity === 'high').length;
   const resolveRate = rTotal > 0 ? Math.round((rResolved / rTotal) * 100) : 0;
 
   // Category counts
@@ -91,20 +93,45 @@ export default function DashboardTab({ reports }: Props) {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [filtered]);
 
+  // Determine timeline grouping granularity based on selected range
+  const granularity = useMemo((): 'hour' | 'day' | 'week' => {
+    if (showCustom && customFrom && customTo) {
+      const rangeDays = (new Date(customTo).getTime() - new Date(customFrom).getTime()) / 86400000;
+      if (rangeDays <= 2) return 'hour';
+      if (rangeDays <= 14) return 'day';
+      return 'week';
+    }
+    if (activeDays === 1) return 'hour';
+    if (activeDays > 0 && activeDays <= 14) return 'day';
+    return 'week';
+  }, [activeDays, showCustom, customFrom, customTo]);
 
-  // Timeline (group by week)
+  // Timeline bucketed by granularity
   const timelineData = useMemo(() => {
-    const weeks: Record<string, number> = {};
+    const buckets: Record<string, number> = {};
     filtered.forEach((r) => {
       if (!r.createdAt) return;
       const d = new Date(r.createdAt);
-      const ws = new Date(d);
-      ws.setDate(d.getDate() - d.getDay());
-      const key = ws.toISOString().slice(0, 10);
-      weeks[key] = (weeks[key] || 0) + 1;
+      let key: string;
+      if (granularity === 'hour') {
+        key = `${d.toISOString().slice(0, 13)}:00`;
+      } else if (granularity === 'day') {
+        key = d.toISOString().slice(0, 10);
+      } else {
+        const ws = new Date(d);
+        ws.setDate(d.getDate() - d.getDay());
+        key = ws.toISOString().slice(0, 10);
+      }
+      buckets[key] = (buckets[key] || 0) + 1;
     });
-    return Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
-  }, [filtered]);
+    return Object.entries(buckets).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+  }, [filtered, granularity]);
+
+  // Format timeline labels based on granularity
+  const timelineLabels = timelineData.map(([key]) => {
+    if (granularity === 'hour') return key.slice(11, 16); // HH:00
+    return key.slice(5); // MM-DD
+  });
 
   // Top reporters
   const topReporters = useMemo(() => {
@@ -126,10 +153,9 @@ export default function DashboardTab({ reports }: Props) {
     return Object.entries(areas).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [filtered]);
 
-
   // Timeline chart data
   const timelineChartData = {
-    labels: timelineData.map(([week]) => week.slice(5)),
+    labels: timelineLabels,
     datasets: [
       {
         label: 'Reports',
@@ -147,7 +173,7 @@ export default function DashboardTab({ reports }: Props) {
   };
 
   return (
-    <div style={{ paddingRight: '2rem' }}>
+    <div style={{ padding: '0 1rem 0 0' }}>
       {/* Time filter */}
       <div style={{ marginBottom: '1.25rem' }}>
         <div className={styles.pillGroup}>
@@ -186,15 +212,15 @@ export default function DashboardTab({ reports }: Props) {
         )}
       </div>
 
-      {/* Total incidents, Report status & severity and category distribution row */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+      {/* Total incidents, Report status & category distribution row */}
+      <div className={styles.dashTopRow}>
         {/* Total incidents box */}
         <div style={{
           background: 'var(--color-bg-primary)',
           border: '0.5px solid var(--color-border)',
           borderRadius: 'var(--border-radius)',
           padding: '1rem',
-          width: '200px',
+          minWidth: '160px',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -210,28 +236,20 @@ export default function DashboardTab({ reports }: Props) {
         <div className={styles.dashSection} style={{ flex: 1 }}>
           <div className={styles.dashSectionTitle}>Report Status</div>
           {rTotal > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>⏳ Pending</span>
-                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(rPending / rTotal) * 100}%`, height: '100%', background: '#f97316', borderRadius: '4px', transition: 'width 0.3s' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[
+                { label: '⏳ Pending', count: rPending, color: '#f97316' },
+                { label: '🚁 In Progress', count: rProgress, color: '#a855f7' },
+                { label: '✅ Resolved', count: rResolved, color: '#059669' },
+              ].map(({ label, count, color }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                  <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>{label}</span>
+                  <div style={{ flex: 1, height: '22px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${(count / rTotal) * 100}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 0.3s' }} />
+                  </div>
+                  <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{count}</span>
                 </div>
-                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rPending}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>🚁 In Progress</span>
-                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(rProgress / rTotal) * 100}%`, height: '100%', background: '#a855f7', borderRadius: '4px', transition: 'width 0.3s' }} />
-                </div>
-                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rProgress}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                <span style={{ width: '90px', flexShrink: 0, color: 'var(--color-text-secondary)' }}>✅ Resolved</span>
-                <div style={{ flex: 1, height: '40px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(rResolved / rTotal) * 100}%`, height: '100%', background: '#059669', borderRadius: '4px', transition: 'width 0.3s' }} />
-                </div>
-                <span style={{ width: '30px', textAlign: 'right', fontWeight: 500, flexShrink: 0 }}>{rResolved}</span>
-              </div>
+              ))}
             </div>
           ) : (
             <div className={styles.empty}>No data</div>
@@ -242,7 +260,7 @@ export default function DashboardTab({ reports }: Props) {
         <div className={styles.dashSection} style={{ flex: 1 }}>
           <div className={styles.dashSectionTitle}>Category Distribution</div>
           {catCounts.length > 0 ? (
-            <div style={{ height: '180px' }}>
+            <div style={{ height: '210px' }}>
               <Pie
                 data={{
                   labels: catCounts.map(([cat]) => cat),
@@ -263,8 +281,9 @@ export default function DashboardTab({ reports }: Props) {
                       labels: {
                         color: 'var(--color-text-secondary)',
                         font: { size: 10 },
-                        padding: 8,
+                        padding: 6,
                         usePointStyle: true,
+                        boxWidth: 8,
                       },
                     },
                     tooltip: {
@@ -283,18 +302,18 @@ export default function DashboardTab({ reports }: Props) {
         </div>
       </div>
 
-      {/* Summary and Timeline row */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-        {/* Summary box */}
-        <div className={styles.dashSection} style={{ width: '200px', flexShrink: 0 }}>
+      {/* Summary stats and Timeline row */}
+      <div className={styles.dashMidRow}>
+        {/* Summary stats column */}
+        <div className={styles.dashSection} style={{ minWidth: '160px', flexShrink: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{resolveRate}%</div>
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Resolve Rate</div>
             </div>
             <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{rProgress}</div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>In Progress</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: rHigh > 0 ? '#ef4444' : 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{rHigh}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>High Severity</div>
             </div>
             <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius-sm)', padding: '0.75rem', textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{rTotal > 0 ? (rTotal / getWeekSpan(filtered)).toFixed(1) : '0'}</div>
@@ -314,9 +333,7 @@ export default function DashboardTab({ reports }: Props) {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: {
-                      display: false,
-                    },
+                    legend: { display: false },
                     tooltip: {
                       backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       padding: 8,
@@ -328,29 +345,14 @@ export default function DashboardTab({ reports }: Props) {
                   scales: {
                     y: {
                       beginAtZero: true,
-                      grid: {
-                        color: 'rgba(229, 231, 235, 0.6)',
-                        lineWidth: 0.8,
-                      },
-                      ticks: {
-                        color: 'var(--color-text-secondary)',
-                        font: { size: 11 },
-                      },
-                      border: {
-                        display: false,
-                      },
+                      grid: { color: 'rgba(229, 231, 235, 0.6)', lineWidth: 0.8 },
+                      ticks: { color: 'var(--color-text-secondary)', font: { size: 11 } },
+                      border: { display: false },
                     },
                     x: {
-                      grid: {
-                        display: false,
-                      },
-                      ticks: {
-                        color: 'var(--color-text-secondary)',
-                        font: { size: 11 },
-                      },
-                      border: {
-                        display: false,
-                      },
+                      grid: { display: false },
+                      ticks: { color: 'var(--color-text-secondary)', font: { size: 11 } },
+                      border: { display: false },
                     },
                   },
                 }}
@@ -364,7 +366,6 @@ export default function DashboardTab({ reports }: Props) {
 
       {/* Top reporters and hotspots side by side */}
       <div className={styles.dashGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-
         {/* Top reporters */}
         <div className={styles.dashSection}>
           <div className={styles.dashSectionTitle}>Top Reporters</div>

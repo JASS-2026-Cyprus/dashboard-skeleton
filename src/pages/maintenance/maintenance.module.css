@@ -4,6 +4,24 @@
   height: 100%;
 }
 
+/* ── Page header ── */
+.pageHeader {
+  margin-bottom: 1.25rem;
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 0.2rem;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
 .tabContent {
   flex: 1;
   min-height: 0;
@@ -19,6 +37,9 @@
 }
 
 .tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -28,6 +49,17 @@
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
+}
+
+.tabIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.tabActive .tabIcon {
+  opacity: 1;
 }
 
 .tab:hover {
@@ -354,7 +386,22 @@
 .filtersRow {
   display: flex;
   gap: 8px;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.filterCount {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.dispatchCoords {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 4px;
+  font-family: 'SF Mono', monospace;
 }
 
 .filterSelect {
@@ -422,7 +469,7 @@
   padding: 1rem;
   margin-bottom: 0.75rem;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .reportCard:hover {
@@ -432,6 +479,7 @@
 .reportCardActive {
   border-color: var(--color-blue);
   background: var(--color-blue-bg);
+  box-shadow: inset 3px 0 0 var(--color-blue);
 }
 
 .rcTop {
@@ -505,11 +553,18 @@
 
 .rdMeta {
   display: flex;
-  gap: 16px;
+  gap: 8px;
   font-size: 13px;
   color: var(--color-text-secondary);
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.rdMetaSep {
+  color: var(--color-border);
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .rdDesc {
@@ -682,9 +737,19 @@
   animation: fadeIn 0.3s ease;
 }
 
+.notifItemDismissing {
+  animation: fadeOut 0.4s ease forwards;
+  pointer-events: none;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); max-height: 48px; margin-bottom: 0; }
+  to   { opacity: 0; transform: translateY(-6px); max-height: 0; margin-bottom: -4px; }
 }
 
 .notifDot {
@@ -752,6 +817,31 @@
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+/* Dashboard flex rows – used for responsive stacking */
+.dashTopRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dashMidRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+  .dashTopRow,
+  .dashMidRow {
+    flex-direction: column;
+  }
+  .dashTopRow > *,
+  .dashMidRow > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
 }
 
 .dashSection {
