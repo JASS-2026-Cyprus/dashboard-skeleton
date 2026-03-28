@@ -18,10 +18,6 @@ const SEV_CONFIG: Record<string, { cls: string; label: string }> = {
   low: { cls: styles.sevLow, label: '🟢 LOW' },
 };
 
-function sevOrder(s: string) {
-  return { high: 0, medium: 1, low: 2 }[s] ?? 3;
-}
-
 interface Props {
   reports: Report[];
 }
@@ -35,11 +31,9 @@ export default function ReportsTab({ reports }: Props) {
   const [dispatching, setDispatching] = useState(false);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
 
-  const sorted = [...reports].sort((a, b) => {
-    const pd = sevOrder(a.severity) - sevOrder(b.severity);
-    if (pd !== 0) return pd;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const sorted = [...reports].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 
   const filtered = sorted.filter(
     (r) =>
@@ -76,15 +70,6 @@ export default function ReportsTab({ reports }: Props) {
       setDispatching(false);
     }
   }, [activeReportId, waypoint]);
-
-  const handleFootageReady = useCallback(
-    (file: File) => {
-      if (activeReportId) {
-        onStartAnalysis(file, activeReportId);
-      }
-    },
-    [activeReportId, onStartAnalysis],
-  );
 
   const isFiltered = priorityFilter !== '' || statusFilter !== '';
 
