@@ -8,7 +8,7 @@ export default function LineGraph({ data, label, currentValue, color = 'var(--co
   if (data.length < 2) {
     return (
       <GraphCard label={label} currentValue={currentValue}>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '60px' }}>
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '44px' }}>
           <line x1="0" y1={height} x2={width} y2={height} stroke="var(--color-border)" strokeWidth="0.5" />
         </svg>
       </GraphCard>

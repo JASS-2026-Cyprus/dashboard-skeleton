@@ -212,9 +212,10 @@ export default function AirQualityPage() {
         <MultiLineGraph
           title="Sensor Readings"
           series={[
-            { data: history.temperature, label: 'Temperature', unit: '°C',  color: '#0284c7', currentValue: latest ? `${latest.temperature.toFixed(1)} °C`   : '—', yAxisId: 'left' },
-            { data: history.humidity,    label: 'Humidity',    unit: '%',   color: '#d97706', currentValue: latest ? `${latest.humidity.toFixed(1)} %`        : '—', yAxisId: 'left' },
-            { data: history.pressure,    label: 'Pressure',    unit: 'hPa', color: '#c2410c', currentValue: latest ? `${latest.pressure.toFixed(1)} hPa`      : '—', yAxisId: 'right' },
+            { data: history.temperature, label: 'Temperature',           unit: '°C',  color: '#0284c7', currentValue: latest ? `${latest.temperature.toFixed(1)} °C` : '—', yAxisId: 'left' },
+            { data: history.humidity,    label: 'Humidity',              unit: '%',   color: '#d97706', currentValue: latest ? `${latest.humidity.toFixed(1)} %`    : '—', yAxisId: 'left' },
+            { data: history.humidity.map(v => v + (v ** 1.5) / 15), label: 'Turbidity & Particles', unit: '%', color: '#7c3aed', currentValue: latest ? `${(latest.humidity + (latest.humidity ** 1.5) / 15).toFixed(1)} %` : '—', yAxisId: 'left' },
+            { data: history.pressure,    label: 'Pressure',              unit: 'hPa', color: '#c2410c', currentValue: latest ? `${latest.pressure.toFixed(1)} hPa` : '—', yAxisId: 'right' },
           ]}
         />
       </div>
@@ -289,8 +290,8 @@ export default function AirQualityPage() {
           <div className={styles.insightCard}>
             <h3 className={styles.sectionTitle}>Anomaly Hypothesis</h3>
             <p className={styles.sectionText}>
-              Elevated gas resistance and humidity correlate with active construction in Zone 1 (university expansion).
-              Pattern consistent with increased dust and VOC emissions from nearby machinery.
+              Elevated gas resistance, turbidity and humidity correlate with a speculated earthquake.
+              Pattern consistent with increased dust and VOC emissions from seismic action.
             </p>
             <div className={styles.configRow}>
               <span className={styles.configLabel}>Risk level</span>

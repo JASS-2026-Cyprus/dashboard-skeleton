@@ -1,8 +1,8 @@
 .container {
   background: var(--color-bg-secondary);
   border-radius: var(--border-radius-sm);
-  padding: 12px;
-  margin-bottom: 1rem;
+  padding: 8px 12px;
+  margin-bottom: 0.5rem;
 }
 
 .header {

@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import type { AlertEntry } from '../lib/waterConfig';
-import { SENSOR_ID_TO_NAME } from '../lib/waterConfig';
 
 // The swarm agent calls send_alert() → POST /event on this server →
 // broadcasts via WebSocket to all connected clients.
-const DASHBOARD_WS = 'ws://localhost:2223/ws';
+const DASHBOARD_WS = 'ws://192.168.1.166:2223/ws';
 
 function fmtNow(): string {
   return new Date().toLocaleTimeString('en-GB', {
@@ -44,19 +43,15 @@ export function useAgentAlerts(): AgentAlertsState {
         const msg = JSON.parse(evt.data as string);
 
         if (msg.type === 'init') {
-          // Pre-existing active actions sent on connect (sensor_actions state)
+          // Pre-existing active actions: {sensor_id: {warning?: expires, critical?: expires}}
           const entries: AlertEntry[] = [];
-          for (const [sid, acts] of Object.entries(msg.actions ?? {})) {
-            for (const act of acts as string[]) {
+          for (const [sid, severities] of Object.entries(msg.actions ?? {})) {
+            for (const sev of Object.keys(severities as Record<string, number>)) {
+              const isCrit = sev === 'critical';
               entries.push({
-                action:
-                  act === 'alert'
-                    ? 'post_alert'
-                    : act === 'maintenance'
-                    ? 'send_maintenance'
-                    : 'close_facility',
-                severity: act === 'closed' ? 'critical' : 'warning',
-                message: `${SENSOR_ID_TO_NAME[sid] ?? sid} — active ${act}`,
+                action: isCrit ? 'close_facility' : 'post_alert',
+                severity: isCrit ? 'critical' : 'warning',
+                message: `${sid} — active ${sev}`,
                 sensor_id: sid,
                 time: '—',
                 isInit: true,
@@ -66,7 +61,7 @@ export function useAgentAlerts(): AgentAlertsState {
           setInitFeed(entries);
         } else if (msg.type === 'action') {
           // Live alert from the water quality agent:
-          // { type:"action", action:"post_alert", sensor_id:"pool_b",
+          // { type:"action", action:"post_alert", sensor_id:"Main Pool",
           //   severity:"warning"|"critical", message:"...", time:"HH:MM:SS" }
           const entry: AlertEntry = {
             action: msg.action,
