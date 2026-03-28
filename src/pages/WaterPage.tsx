@@ -15,6 +15,7 @@ import { POOLS, POOL_TO_SENSOR_ID, SENSOR_ID_TO_NAME } from '../lib/waterConfig'
 import type { Pool, AlertEntry } from '../lib/waterConfig';
 import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
+import WaterInfraTab from './water/WaterInfraTab';
 import type { Reading } from '../hooks/useWaterData';
 import styles from './WaterPage.module.css';
 
@@ -132,7 +133,19 @@ function DeltaChart({ deltaData }: { deltaData: Reading[] }) {
 
 function RiskBanner({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
   const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const top = entries.find((e) => e.sensor_id === sensorId);
+  const top = sensorId ? entries.find((e) => e.sensor_id === sensorId) : undefined;
+
+  if (!sensorId) {
+    return (
+      <div className={`${styles.banner} ${styles.bannerClear}`}>
+        <span>ℹ️</span>
+        <div>
+          <strong>NOT MONITORED</strong>
+          <span className={styles.bannerDetail}>{selectedPool} has no swarm agent sensor — data shown from Supabase only</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!top) {
     return (
@@ -167,8 +180,8 @@ const ACTION_LABEL: Record<string, string> = {
 
 function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
   const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const poolEntries = entries.filter((e) => e.sensor_id === sensorId);
-  const otherEntries = entries.filter((e) => e.sensor_id !== sensorId);
+  const poolEntries = sensorId ? entries.filter((e) => e.sensor_id === sensorId) : [];
+  const otherEntries = sensorId ? entries.filter((e) => e.sensor_id !== sensorId) : entries;
   const display = [...poolEntries, ...otherEntries].slice(0, 15);
 
   if (!display.length) {
@@ -187,7 +200,7 @@ function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedP
           ? styles.badgeInit
           : styles.badgeWarning;
         const badgeText = isCritical ? 'critical' : (ACTION_LABEL[e.action] ?? e.action);
-        const isOtherPool = e.sensor_id !== sensorId;
+        const isOtherPool = !sensorId || e.sensor_id !== sensorId;
         return (
           <div key={i} className={styles.feedEntry}>
             <span className={`${styles.badge} ${badgeClass}`}>{badgeText}</span>
@@ -210,7 +223,7 @@ function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedP
 // ── main page ─────────────────────────────────────────────────────────────────
 export default function WaterPage() {
   const [selectedPool, setSelectedPool] = useState<Pool>('Main Pool');
-  const [view, setView] = useState<'pools' | 'map'>('pools');
+  const [view, setView] = useState<'pools' | 'map' | 'infra'>('pools');
 
   const {
     poolOut, poolIn, seaData, deltaData,
@@ -238,15 +251,26 @@ export default function WaterPage() {
           >
             Map
           </button>
+          <button
+            className={`${styles.viewBtn} ${view === 'infra' ? styles.viewBtnActive : ''}`}
+            onClick={() => setView('infra')}
+          >
+            Infrastructure
+          </button>
         </div>
       </div>
 
+      {/* Infrastructure view */}
+      {view === 'infra' && <WaterInfraTab />}
+
       {/* Map view */}
       {view === 'map' && (
-        <div className={styles.mapPlaceholder}>
-          <span>🗺️</span>
-          <p>Map view coming soon</p>
-        </div>
+        <iframe
+          src="http://192.168.1.166:2223"
+          className={styles.mapFrame}
+          style={{ width: '100%', height: 'calc(100vh - 80px)', border: 'none' }}
+          title="Water Monitoring Map"
+        />
       )}
 
       {/* Pools view */}

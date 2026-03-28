@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image with config
+        run: |
+          # Construct config.json from GitHub Secrets
+          CONFIG=$(cat <<EOF
+          {
+            "subsystems": {
+              "airQuality": {
+                "backendUrl": "${{ secrets.AIR_QUALITY_BACKEND_URL }}"
+              },
+              "waterQuality": {
+                "backendUrl": "${{ secrets.WATER_QUALITY_BACKEND_URL }}"
+              },
+              "maintenance": {
+                "backendUrl": "${{ secrets.MAINTENANCE_BACKEND_URL }}"
+              },
+              "earthquake": {
+                "backendUrl": "${{ secrets.EARTHQUAKE_BACKEND_URL }}"
+              }
+            }
+          }
+          EOF
+          )
+
+          docker build \
+            --build-arg SUBSYSTEMS_CONFIG="$CONFIG" \
+            -t cockpit-dashboard:latest .
+
+      - uses: robocy-lab/deploy-action@main
+        with:
+          host: server2026.jass.school
+          ssh-user: jass
+          ssh-key: ${{ secrets.SERVER_SSH_KEY }}
+          cloudflare-tunnel: 'true'
+          directory: /home/jass/JASS-Cockpit-Dashboard

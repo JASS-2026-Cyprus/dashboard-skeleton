@@ -14,12 +14,7 @@ export interface TeamWidgetProps {
   stats: StatItem[];
   graph?: ReactNode;
   detailsLink?: string;
-}
-
-export interface SystemSummaryProps {
-  action: string;
-  urgency: string;
-  state: string;
+  size?: 'wide' | 'tall' | 'large';
 }
 
 export interface LineGraphProps {

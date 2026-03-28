@@ -1,3 +1,40 @@
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  padding: 0.3rem 0.85rem;
+  border-radius: 6px;
+  border: 0.5px solid var(--color-border);
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.tabActive {
+  font-weight: 500;
+  border-color: transparent;
+}
+
+.tabActiveGreen  { background: #f1f8e9; color: #33691e; }
+.tabActiveBlue   { background: #e3f2fd; color: #1565c0; }
+.tabActiveGray   { background: #e8eaf6; color: #283593; }
+
+.eventBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.badgeActive   { background: #f1f8e9; color: #33691e; }
+.badgeUpcoming { background: #e3f2fd; color: #1565c0; }
+.badgePast     { background: #e8eaf6; color: #283593; }
+
 .pageHeader {
   font-size: 22px;
   font-weight: 500;
@@ -97,4 +134,116 @@
   color: var(--color-text-secondary);
   font-size: 14px;
   margin-bottom: 1rem;
+}
+
+/* ── Air Quality: events grid ───────────────────────────── */
+.eventsScroll {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.eventsScroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.eventsScroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.eventsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+/* ── Air Quality: gauge bar ─────────────────────────────── */
+.gaugeTrack {
+  height: 4px;
+  background: var(--color-bg-page);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.gaugeFill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+/* ── Air Quality: advice cards ──────────────────────────── */
+.adviceGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.adviceCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-bg-secondary);
+  border-left: 3px solid var(--color-border);
+}
+
+.adviceInfo  { border-left-color: var(--color-blue); }
+.adviceWarning { border-left-color: #d97706; background: #fefce8; }
+.adviceDanger  { border-left-color: #dc2626; background: #fef2f2; }
+
+.adviceBody { flex: 1; }
+
+.adviceTitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.adviceMessage {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.adviceDismiss {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  padding: 0 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ── Air Quality: insights toggle ───────────────────────── */
+.sectionTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toggleButton {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+}
+
+.insightsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insightCard {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 0.75rem;
 }
