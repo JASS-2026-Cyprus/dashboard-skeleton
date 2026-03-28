@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // Hardcoded IP - easy to change
-const DRONE_IP = '192.168.1.100';
+const DRONE_IP = '192.168.1.109';
 const DRONE_PORT = '8000';
 
 
@@ -37,8 +37,9 @@ export default function DroneStatus() {
 
         if (response.ok) {
           const data = (await response.json()) as DroneStatusData;
+          console.log(data);
           setDroneInfo({
-            connected: data.status === 'streaming',
+            connected: true,
             airborne: data.is_airborne ?? false,
             latitude: data.current_position ? data.current_position[0] : null,
             longitude: data.current_position ? data.current_position[1] : null,
@@ -107,9 +108,8 @@ export default function DroneStatus() {
           </div>
         </div>
 
-        {isConnected && !isLoading && (
+        {isConnected && !isLoading && droneInfo.airborne && (
           <div style={{ fontSize: 13, fontWeight: 600, color: statusColor, lineHeight: 1.5 }}>
-            <div>Airborne: {droneInfo.airborne ? 'Yes' : 'No'}</div>
             {droneInfo.latitude !== null && droneInfo.longitude !== null && (
               <div>
                 Lat: {droneInfo.latitude.toFixed(4)}, Lon: {droneInfo.longitude.toFixed(4)}
