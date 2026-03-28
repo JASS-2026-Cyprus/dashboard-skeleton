@@ -1,16 +1,5 @@
 import { useState, useEffect } from 'react';
-
-// Hardcoded IP - easy to change
-const DRONE_IP = '192.168.1.109';
-const DRONE_PORT = '8000';
-
-
-interface DroneStatusData {
-  status: 'streaming' | 'no_stream' | 'offline';
-  rtsp_url?: string | null;
-  is_airborne?: boolean;
-  current_position?: [number, number];
-}
+import { getDroneStatus } from './droneApi';
 
 interface DroneInfo {
   connected: boolean;
@@ -32,26 +21,14 @@ export default function DroneStatus() {
     const fetchDroneStatus = async () => {
       try {
         setIsLoading(true);
-        const url = `http://${DRONE_IP}:${DRONE_PORT}/status`;
-        const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-
-        if (response.ok) {
-          const data = (await response.json()) as DroneStatusData;
-          console.log(data);
-          setDroneInfo({
-            connected: true,
-            airborne: data.is_airborne ?? false,
-            latitude: data.current_position ? data.current_position[0] : null,
-            longitude: data.current_position ? data.current_position[1] : null,
-          });
-        } else {
-          setDroneInfo({
-            connected: false,
-            airborne: false,
-            latitude: null,
-            longitude: null,
-          });
-        }
+        const data = await getDroneStatus();
+        console.log(data);
+        setDroneInfo({
+          connected: true,
+          airborne: data.is_airborne ?? false,
+          latitude: data.current_position ? data.current_position[0] : null,
+          longitude: data.current_position ? data.current_position[1] : null,
+        });
       } catch {
         setDroneInfo({
           connected: false,
