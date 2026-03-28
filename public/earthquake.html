@@ -206,7 +206,9 @@ function makeTriangleIcon(color) {
 function addCrackMarker(r) {
     const id = 'crack_'+r.id;
     const c = COLORS[r.severity]||'#999';
-    const needsAttention = !r.ui_checked; // triangle for ANY unchecked (new or worsened)
+    // Triangle if: status is new/worsened AND not acknowledged, OR was previously a triangle (ui_checked=false)
+    const isNewOrWorsened = r.status === 'new' || r.status === 'worsened';
+    const needsAttention = !r.ui_checked && isNewOrWorsened;
     const statusLabel = r.status==='worsened'?' <span style="color:#e53935;font-weight:700">⚠ WORSENED</span>':' <span style="color:#378add;font-weight:700">NEW</span>';
     const photoBtn = r.image_url ? `<button onclick="event.stopPropagation();showPhotos('${r.image_before_url||''}','${r.image_url}','${(r.image_name||'').replace(/'/g,'')}')" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:600;background:#378add;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">📷 View Photos</button>` : '';
     const ackBtn = needsAttention ? `<button onclick="event.stopPropagation();acknowledgeCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#f5a623;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%">👁 ACKNOWLEDGE</button>` : '';
@@ -461,10 +463,10 @@ async function fetchCracks() {
         const t = r.created_at ? new Date(r.created_at).toLocaleTimeString() : '—';
         const sev = r.severity || 'low';
         const id = 'crack_'+r.id;
-        const unchecked = !r.ui_checked;
+        const isNW = (r.status==='new'||r.status==='worsened') && !r.ui_checked;
         const label = r.status==='worsened'?'⚠ WORSENED':'🆕 NEW';
-        return `<div class="event" style="cursor:pointer${unchecked?';border-left:3px solid #e53935':''}" onclick="flyToCrack(${r.lat},${r.lon},'${id}')">
-            <span class="badge ${sev}">${sev}</span>${unchecked?` <span style="color:#e53935;font-size:10px;font-weight:700">${label}</span>`:''}
+        return `<div class="event" style="cursor:pointer${isNW?';border-left:3px solid #e53935':''}" onclick="flyToCrack(${r.lat},${r.lon},'${id}')">
+            <span class="badge ${sev}">${sev}</span>${isNW?` <span style="color:#e53935;font-size:10px;font-weight:700">${label}</span>`:''}
             ${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm
             <span style="color:var(--text2)">${r.image_name||''}</span>
             <div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div>
