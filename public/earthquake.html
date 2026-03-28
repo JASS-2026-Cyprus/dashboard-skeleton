@@ -438,9 +438,9 @@ async function fetchCracks() {
     if(map._popup && map._popup.isOpen()) return;
 
     const rows = await sbGet('crack_reports','&limit=50');
-    // Only show cracks that actually have a crack
-    const withCrack = rows.filter(r => r.has_crack === true);
-    if(!withCrack.length) {
+    // Show: (new + has_crack) OR (worsened)
+    const visible = rows.filter(r => (r.status==='new' && r.has_crack===true) || r.status==='worsened');
+    if(!visible.length) {
         crackData = [];
         updateDamageCounts();
         document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>';
@@ -449,7 +449,7 @@ async function fetchCracks() {
 
     // Group by coordinate (round to 4 decimals) — keep only latest per location
     const byCoord = {};
-    for(const r of withCrack) {
+    for(const r of visible) {
         const key = (r.lat?.toFixed(4)||'0')+'_'+(r.lon?.toFixed(4)||'0');
         if(!byCoord[key] || new Date(r.created_at) > new Date(byCoord[key].created_at)) {
             byCoord[key] = r;
