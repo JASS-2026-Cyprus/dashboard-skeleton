@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { squarePattern, returnToBase } from './droneApi';
 import styles from './maintenance.module.css';
 
-const STAGES = [
-  { icon: '🛸', label: 'Drone dispatched — navigating to location', sub: 'Calculating optimal flight path…', duration: 5000 },
-  { icon: '📹', label: 'Drone on-site — capturing footage', sub: 'Recording visual data of the reported area…', duration: 6000 },
-  { icon: '📡', label: 'Footage secured — transmitting to server', sub: 'Uploading compressed video stream…', duration: 3000 },
-  { icon: '🔬', label: 'Visual Intelligence pipeline ready', sub: 'Upload drone footage to begin AI analysis', duration: null as number | null },
+interface StageConfig {
+  icon: string;
+  label: string;
+  sub: string;
+}
+
+const STAGES: StageConfig[] = [
+  { icon: '📹', label: 'Capturing footage — running scan pattern', sub: 'Executing square pattern at target location…' },
+  { icon: '📡', label: 'Returning to base', sub: 'Flying back to starting position and landing…' },
+  { icon: '🔬', label: 'Visual Intelligence pipeline ready', sub: 'Upload drone footage to begin AI analysis' },
 ];
 
 interface Props {
@@ -14,12 +20,13 @@ interface Props {
 
 export default function DroneDispatch({ onFootageReady }: Props) {
   const [currentStage, setCurrentStage] = useState(0);
-  const [stageProgress, setStageProgress] = useState(0);
   const [completedStages, setCompletedStages] = useState<Set<number>>(new Set());
+  const [stageError, setStageError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const startTime = useRef(Date.now());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const runningRef = useRef(false);
 
   // Elapsed time clock
   useEffect(() => {
@@ -29,25 +36,32 @@ export default function DroneDispatch({ onFootageReady }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // Stage progression
+  // Run API-driven stages sequentially
   useEffect(() => {
-    const stage = STAGES[currentStage];
-    if (!stage || stage.duration === null) return;
+    if (runningRef.current) return;
+    runningRef.current = true;
 
-    setStageProgress(0);
-    const start = Date.now();
-    const interval = setInterval(() => {
-      const p = Math.min(1, (Date.now() - start) / stage.duration!);
-      setStageProgress(p);
-      if (p >= 1) {
-        clearInterval(interval);
-        setCompletedStages((prev) => new Set(prev).add(currentStage));
-        setCurrentStage((prev) => prev + 1);
+    (async () => {
+      // Stage 0: square pattern
+      try {
+        await squarePattern(1.0);
+        setCompletedStages((prev) => new Set(prev).add(0));
+        setCurrentStage(1);
+      } catch (e) {
+        setStageError(e instanceof Error ? e.message : 'Square pattern failed');
+        return;
       }
-    }, 50);
 
-    return () => clearInterval(interval);
-  }, [currentStage]);
+      // Stage 1: return to base
+      try {
+        await returnToBase();
+        setCompletedStages((prev) => new Set(prev).add(1));
+        setCurrentStage(2);
+      } catch (e) {
+        setStageError(e instanceof Error ? e.message : 'Return to base failed');
+      }
+    })();
+  }, []);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,11 +97,6 @@ export default function DroneDispatch({ onFootageReady }: Props) {
             <div className={styles.msBody}>
               <div className={styles.msLabel}>{stage.label}</div>
               <div className={styles.msSub}>{isDone ? 'Complete' : stage.sub}</div>
-              {!isLast && isActive && (
-                <div className={styles.msProgress}>
-                  <div className={styles.msBar} style={{ width: `${stageProgress * 100}%` }} />
-                </div>
-              )}
               {isLast && isActive && (
                 <div className={styles.droneUploadArea}>
                   <label className={styles.droneFileBtn} onClick={() => fileInputRef.current?.click()}>
@@ -121,6 +130,12 @@ export default function DroneDispatch({ onFootageReady }: Props) {
           </div>
         );
       })}
+
+      {stageError && (
+        <div style={{ marginTop: '0.75rem', fontSize: 13, color: '#c53030' }}>
+          Mission error: {stageError}
+        </div>
+      )}
     </div>
   );
 }
