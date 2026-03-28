@@ -1,3 +1,14 @@
+.pageWrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tabContent {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ── Tab navigation ── */
 .tabs {
   display: flex;
@@ -874,6 +885,15 @@
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 1rem;
+  align-items: start;
+}
+
+.splitLayout > div:first-child {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
 }
 
 @media (max-width: 800px) {
@@ -883,7 +903,8 @@
 }
 
 .reportsList {
-  max-height: 70vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 

@@ -1,9 +1,8 @@
-import { useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import type { Report } from './firebase';
 import styles from './maintenance.module.css';
-
-const ROOM_W = 60;
-const ROOM_H = 40;
 
 const CAT_COLORS: Record<string, string> = {
   trash: '#f97316',
@@ -17,15 +16,27 @@ const CAT_COLORS: Record<string, string> = {
   vandalism: '#6366f1',
 };
 
-function reportRoomCoords(r: Report): { x: number; y: number } | null {
-  let x = r.roomX ?? null;
-  let y = r.roomY ?? null;
-  if (x == null && r.lat != null) {
-    x = r.lng || 0;
-    y = r.lat || 0;
-  }
-  if (x == null || y == null) return null;
-  return { x: Math.max(0, Math.min(ROOM_W, x)), y: Math.max(0, Math.min(ROOM_H, y)) };
+const DEFAULT_CENTER: [number, number] = [34.775, 32.42]; // Cyprus
+const DEFAULT_ZOOM = 13;
+
+function reportLatLng(r: Report): [number, number] | null {
+  if (r.lat != null && r.lng != null) return [r.lat, r.lng];
+  return null;
+}
+
+function circleIcon(color: string, active: boolean): L.DivIcon {
+  const size = active ? 18 : 12;
+  const border = active ? `3px solid ${color}` : '2px solid white';
+  return L.divIcon({
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:${border};
+      box-shadow:0 0 ${active ? 8 : 4}px ${color}80;
+    "></div>`,
+  });
 }
 
 interface Props {
@@ -37,142 +48,118 @@ interface Props {
 }
 
 export default function RoomMap({ reports, activeReportId, waypoint, onSetWaypoint, onSelectReport }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.LayerGroup>(L.layerGroup());
+  const waypointRef = useRef<L.Marker | null>(null);
 
-  const findings = reports
-    .map((r) => {
-      const coords = reportRoomCoords(r);
-      return coords ? { ...r, ...coords } : null;
-    })
-    .filter(Boolean) as (Report & { x: number; y: number })[];
+  // Initialize map once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
 
-  const getSvgPoint = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      const svg = svgRef.current;
-      if (!svg) return null;
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      const ctm = svg.getScreenCTM();
-      if (!ctm) return null;
-      return pt.matrixTransform(ctm.inverse());
-    },
-    [],
-  );
+    const map = L.map(containerRef.current, {
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: true,
+    });
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      const pt = getSvgPoint(e);
-      if (!pt) return;
-      const x = Math.max(0, Math.min(ROOM_W, pt.x));
-      const y = Math.max(0, Math.min(ROOM_H, ROOM_H - pt.y));
-      onSetWaypoint({ x, y });
-    },
-    [getSvgPoint, onSetWaypoint],
-  );
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
 
-  // Door dimensions
-  const doorW = 5;
-  const doorCenter = ROOM_H / 2;
-  const doorTop = doorCenter - doorW / 2;
-  const doorBottom = doorCenter + doorW / 2;
+    markersRef.current.addTo(map);
+
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      onSetWaypoint({ x: e.latlng.lng, y: e.latlng.lat });
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update report markers
+  useEffect(() => {
+    const group = markersRef.current;
+    group.clearLayers();
+
+    for (const r of reports) {
+      const pos = reportLatLng(r);
+      if (!pos) continue;
+      const color = CAT_COLORS[r.category?.toLowerCase()] || '#6b7280';
+      const isActive = r.id === activeReportId;
+
+      const marker = L.marker(pos, { icon: circleIcon(color, isActive) });
+      marker.bindTooltip(r.title || r.category || 'Report', { direction: 'top', offset: [0, -8] });
+      marker.on('click', () => onSelectReport?.(r.id));
+      group.addLayer(marker);
+    }
+  }, [reports, activeReportId, onSelectReport]);
+
+  // Update waypoint marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (waypointRef.current) {
+      map.removeLayer(waypointRef.current);
+      waypointRef.current = null;
+    }
+
+    if (waypoint) {
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        html: `<div style="
+          width:24px;height:24px;position:relative;
+        ">
+          <div style="
+            position:absolute;inset:0;border-radius:50%;
+            background:rgba(59,130,246,0.2);
+            animation:pulse 2s ease-in-out infinite;
+          "></div>
+          <div style="
+            position:absolute;top:8px;left:3px;right:3px;height:2px;
+            background:#3b82f6;border-radius:1px;
+          "></div>
+          <div style="
+            position:absolute;left:10px;top:2px;bottom:2px;width:2px;
+            background:#3b82f6;border-radius:1px;
+          "></div>
+          <div style="
+            position:absolute;top:8px;left:8px;width:6px;height:6px;
+            border-radius:50%;background:#3b82f6;border:1.5px solid white;
+          "></div>
+        </div>`,
+      });
+
+      waypointRef.current = L.marker([waypoint.y, waypoint.x], { icon, interactive: false }).addTo(map);
+    }
+  }, [waypoint]);
+
+  // Pan to active report when selected
+  useEffect(() => {
+    if (!mapRef.current || !activeReportId) return;
+    const r = reports.find((rep) => rep.id === activeReportId);
+    if (!r) return;
+    const pos = reportLatLng(r);
+    if (pos) mapRef.current.setView(pos, Math.max(mapRef.current.getZoom(), 15), { animate: true });
+  }, [activeReportId, reports]);
 
   return (
     <div className={styles.roomMapWrap}>
       <div className={styles.roomMapTitle}>
-        Room Map <span className={styles.roomMapDims}>{ROOM_W}×{ROOM_H} m</span>
+        Location Map
       </div>
-      <div className={styles.roomMapContainer}>
-        <svg
-          ref={svgRef}
-          viewBox={`-4 -1 ${ROOM_W + 8} ${ROOM_H + 4}`}
-          preserveAspectRatio="xMidYMid meet"
-          onClick={handleClick}
-          style={{ cursor: 'crosshair' }}
-        >
-          {/* Floor */}
-          <rect x="0" y="0" width={ROOM_W} height={ROOM_H} fill="var(--color-bg-secondary)" />
-
-          {/* Grid lines */}
-          {Array.from({ length: ROOM_W / 10 + 1 }, (_, i) => i * 10).map((x) => (
-            <line key={`gx${x}`} x1={x} y1={0} x2={x} y2={ROOM_H} stroke="var(--color-border)" strokeWidth="0.06"
-              strokeDasharray={x % 20 === 0 ? 'none' : '0.5,0.5'} />
-          ))}
-          {Array.from({ length: ROOM_H / 10 + 1 }, (_, i) => i * 10).map((y) => (
-            <line key={`gy${y}`} x1={0} y1={y} x2={ROOM_W} y2={y} stroke="var(--color-border)" strokeWidth="0.06"
-              strokeDasharray={y % 20 === 0 ? 'none' : '0.5,0.5'} />
-          ))}
-
-          {/* Axis labels */}
-          {Array.from({ length: ROOM_W / 10 + 1 }, (_, i) => i * 10).map((x) => (
-            <text key={`lx${x}`} x={x} y={ROOM_H + 2} textAnchor="middle" fontSize="1.4"
-              fill="var(--color-text-secondary)" fontFamily="system-ui">{x}</text>
-          ))}
-          {Array.from({ length: ROOM_H / 10 + 1 }, (_, i) => i * 10).map((y) => (
-            <text key={`ly${y}`} x={-1.5} y={ROOM_H - y + 0.5} textAnchor="end" fontSize="1.4"
-              fill="var(--color-text-secondary)" fontFamily="system-ui">{y}</text>
-          ))}
-
-          {/* Walls */}
-          <rect x={0} y={0} width={ROOM_W} height={0.5} fill="#1a1a1a" />
-          <rect x={0} y={ROOM_H - 0.5} width={ROOM_W} height={0.5} fill="#1a1a1a" />
-          <rect x={0} y={0} width={0.5} height={ROOM_H} fill="#1a1a1a" />
-          <rect x={ROOM_W - 0.5} y={0} width={0.5} height={doorTop} fill="#1a1a1a" />
-          <rect x={ROOM_W - 0.5} y={doorBottom} width={0.5} height={ROOM_H - doorBottom} fill="#1a1a1a" />
-
-          {/* Door arc */}
-          <path
-            d={`M${ROOM_W - 0.5},${doorTop} A${doorW},${doorW} 0 0,0 ${ROOM_W - 0.5 - doorW},${doorTop}`}
-            fill="none" stroke="#1a1a1a" strokeWidth="0.12" strokeDasharray="0.4,0.3" opacity={0.5}
-          />
-          <text x={ROOM_W + 0.8} y={doorCenter + 0.5} fontSize="1.3" fill="var(--color-text-secondary)"
-            fontFamily="system-ui" fontStyle="italic">Door</text>
-
-          {/* Findings (report markers) */}
-          {findings.map((f) => {
-            const color = CAT_COLORS[f.category?.toLowerCase()] || '#6b7280';
-            const isActive = f.id === activeReportId;
-            const r = isActive ? 1.5 : 1;
-            const sy = ROOM_H - f.y;
-            return (
-              <g
-                key={f.id}
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectReport?.(f.id);
-                }}
-              >
-                <circle cx={f.x} cy={sy} r={r + 0.5} fill={color} opacity={0.2} />
-                <circle cx={f.x} cy={sy} r={r} fill={color} stroke="white" strokeWidth="0.25" />
-                {isActive && (
-                  <circle cx={f.x} cy={sy} r={r + 1.2} fill="none" stroke={color}
-                    strokeWidth="0.15" strokeDasharray="0.6,0.4" />
-                )}
-              </g>
-            );
-          })}
-
-          {/* Waypoint marker */}
-          {waypoint && (() => {
-            const wx = waypoint.x;
-            const wy = ROOM_H - waypoint.y;
-            return (
-              <g>
-                <circle cx={wx} cy={wy} r={2} fill="var(--color-blue)" opacity={0.15}>
-                  <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite" />
-                </circle>
-                <line x1={wx - 1.2} y1={wy} x2={wx + 1.2} y2={wy} stroke="var(--color-blue)" strokeWidth="0.2" />
-                <line x1={wx} y1={wy - 1.2} x2={wx} y2={wy + 1.2} stroke="var(--color-blue)" strokeWidth="0.2" />
-                <circle cx={wx} cy={wy} r={0.6} fill="var(--color-blue)" stroke="white" strokeWidth="0.15" />
-              </g>
-            );
-          })()}
-        </svg>
-      </div>
+      <div ref={containerRef} style={{ height: 300, borderRadius: 8, overflow: 'hidden' }} />
       <div className={styles.roomMapCoords}>
         {waypoint
-          ? `Target: (${waypoint.x.toFixed(1)}, ${waypoint.y.toFixed(1)}) m`
+          ? `Target: ${waypoint.y.toFixed(5)}, ${waypoint.x.toFixed(5)}`
           : 'Click map to set drone waypoint'}
       </div>
     </div>
