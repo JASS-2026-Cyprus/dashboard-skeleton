@@ -198,7 +198,7 @@ export default function Overview() {
           title="Maintenance"
           status="Monitoring"
           statusColor="blue"
-          description="City infrastructure maintenance overview"
+          description=""
           detailsLink="/maintenance"
           stats={[]}
         >
