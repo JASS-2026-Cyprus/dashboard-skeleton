@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { AlertEntry } from '../lib/waterConfig';
 
 // The swarm agent calls send_alert() → POST /event on this server →
@@ -19,7 +19,8 @@ export interface AgentAlertsState {
 }
 
 export function useAgentAlerts(): AgentAlertsState {
-  const [alertFeed, setAlertFeed] = useState<AlertEntry[]>([]);
+  const [liveFeed, setLiveFeed] = useState<AlertEntry[]>([]);
+  const [initFeed, setInitFeed] = useState<AlertEntry[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
 
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,15 +73,29 @@ export function useAgentAlerts(): AgentAlertsState {
           setLiveFeed((prev) => [entry, ...prev].slice(0, 50));
         }
       } catch {
-        setWsConnected(false);
+        /* ignore parse errors */
       }
     };
 
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5000); // Poll every 5 seconds
+    ws.onclose = () => {
+      setWsConnected(false);
+      reconnectTimer.current = setTimeout(connectWs, 5000);
+    };
 
-    return () => clearInterval(interval);
-  }, []);
+    ws.onerror = () => ws.close();
+  }
 
-  return { alertFeed, wsConnected };
+  useEffect(() => {
+    connectWs();
+    return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      wsRef.current?.close();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live alerts first (newest first), then pre-existing init state at the end
+  return {
+    alertFeed: [...liveFeed, ...initFeed],
+    wsConnected,
+  };
 }
