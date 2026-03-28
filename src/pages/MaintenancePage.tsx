@@ -29,7 +29,7 @@ export default function MaintenancePage() {
   }, []);
 
   return (
-    <>
+    <div className={styles.pageWrap}>
       <Toast reports={reports} onClickReport={handleToastClick} />
 
       <div className={styles.tabs}>
@@ -44,11 +44,13 @@ export default function MaintenancePage() {
         ))}
       </div>
 
-      {activeTab === 'analysis' && <AnalysisTab />}
-      {activeTab === 'reports' && (
-        <ReportsTab reports={reports} onStartAnalysis={handleStartAnalysisFromReport} />
-      )}
-      {activeTab === 'dashboard' && <DashboardTab reports={reports} />}
-    </>
+      <div className={styles.tabContent}>
+        {activeTab === 'analysis' && <AnalysisTab />}
+        {activeTab === 'reports' && (
+          <ReportsTab reports={reports} onStartAnalysis={handleStartAnalysisFromReport} />
+        )}
+        {activeTab === 'dashboard' && <DashboardTab reports={reports} />}
+      </div>
+    </div>
   );
 }

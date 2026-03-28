@@ -55,11 +55,8 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
       setActiveReportId(id);
       setMissionActive(false);
       const r = reports.find((rep) => rep.id === id);
-      if (r) {
-        let x = r.roomX ?? null;
-        let y = r.roomY ?? null;
-        if (x == null && r.lat != null) { x = r.lng || 0; y = r.lat || 0; }
-        if (x != null && y != null) setWaypoint({ x, y });
+      if (r?.lat != null && r?.lng != null) {
+        setWaypoint({ x: r.lng, y: r.lat });
       }
     },
     [reports],
@@ -206,7 +203,7 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
                   {dispatching
                     ? '🚁 Sending mission…'
                     : waypoint
-                      ? `🚁 Fly to (${waypoint.x.toFixed(1)}, ${waypoint.y.toFixed(1)})`
+                      ? `🚁 Fly to (${waypoint.y.toFixed(5)}, ${waypoint.x.toFixed(5)})`
                       : '🚁 Select a point on the map to dispatch'}
                 </button>
                 {dispatchError && (
