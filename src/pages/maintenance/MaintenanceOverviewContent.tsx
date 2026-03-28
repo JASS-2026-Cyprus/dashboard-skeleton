@@ -1,4 +1,5 @@
 import type { Report } from './firebase';
+import DroneStatus from './DroneStatus';
 
 interface Props {
   reports: Report[];
@@ -118,6 +119,9 @@ export default function MaintenanceOverviewContent({ reports }: Props) {
             <div style={{ fontSize: 11, color: '#6b21a8', fontWeight: 500 }}>In Progress</div>
           </div>
         </div>
+
+        {/* Drone Status */}
+        <DroneStatus />
       </div>
     </div>
   );
