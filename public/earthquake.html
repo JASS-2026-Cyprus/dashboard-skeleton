@@ -303,6 +303,15 @@ const chartProb = new Chart(document.getElementById('chart-prob'),{type:'bar',da
 
 let droneData=[], sensorConnected=false;
 
+function updateDamageCounts(){
+    let total=droneData.length+crackData.length;
+    let critical=0;
+    for(const r of droneData){if(r.severity==='critical')critical++;}
+    for(const r of crackData){if(r.severity==='critical')critical++;}
+    document.getElementById('damage-count').textContent=total;
+    document.getElementById('critical-count').textContent=critical;
+}
+
 async function fetchLive() {
     try {
         const rows = await sbGet('sensor_stream','&limit=1');
@@ -331,9 +340,9 @@ async function fetchLive() {
 
         const prob=d.prob||0, pga=d.pga||0, isEq=d.label==='EARTHQUAKE';
 
-        // Keep status red for 30 sec after earthquake
+        // Keep status red for 10 sec after earthquake (matches buzzer duration)
         if(isEq) window._lastEqTime=Date.now();
-        const showRed = isEq || (window._lastEqTime && (Date.now()-window._lastEqTime)<30000);
+        const showRed = isEq || (window._lastEqTime && (Date.now()-window._lastEqTime)<10000);
 
         document.getElementById('lstm-status').textContent=showRed?'EARTHQUAKE':'QUIET';
         document.getElementById('lstm-status').className='value '+(showRed?'red':'green');
@@ -342,11 +351,9 @@ async function fetchLive() {
         document.getElementById('pga-value').textContent=pga.toFixed(3)+'g';
         document.getElementById('pga-value').style.color=pga>0.1?'var(--red)':'var(--text)';
 
-        // Earthquake popup alert
-        if(isEq&&!window._eqPopupShown){
-            window._eqPopupShown=true;
+        // Earthquake popup alert — show for each new earthquake
+        if(isEq){
             showEqAlert(pga,prob);
-            setTimeout(()=>{window._eqPopupShown=false;},30000);
         }
 
         if(isEq&&!window._droneActive){
@@ -367,17 +374,17 @@ async function fetchHistory() {
     const newest = rows[0];
     const ageSec = (Date.now() - new Date(newest.created_at).getTime()) / 1000;
 
-    // Keep LSTM status red if earthquake < 30 sec ago (catches what sensor_stream misses)
-    if(ageSec < 30) {
+    // Keep LSTM status red if earthquake < 10 sec ago (matches buzzer)
+    if(ageSec < 10) {
         window._lastEqTime = Date.now() - ageSec*1000;
         document.getElementById('lstm-status').textContent='EARTHQUAKE';
         document.getElementById('lstm-status').className='value red';
-        // Show popup if not shown yet
-        if(!window._eqPopupShown){
-            window._eqPopupShown=true;
-            showEqAlert(newest.pga_g||0, newest.probability||0);
-            setTimeout(()=>{window._eqPopupShown=false;},30000);
-        }
+    }
+    // Show popup for new earthquakes not yet shown
+    const newestEpoch = newest.epoch || (new Date(newest.created_at).getTime()/1000);
+    if(ageSec < 10 && newestEpoch !== window._lastShownEqEpoch) {
+        window._lastShownEqEpoch = newestEpoch;
+        showEqAlert(newest.pga_g||0, newest.probability||0);
     }
 
     if(ageSec < 180 && !window._droneActive){
@@ -389,11 +396,9 @@ async function fetchDrone() {
     const rows = await sbGet('drone_reports');
     if(!rows.length) return;
     droneData=rows;
-    let total=0,critical=0;
-    for(const r of droneData){addMarker(r);total++;if(r.severity==='critical')critical++;}
-    document.getElementById('damage-count').textContent=total;
-    document.getElementById('critical-count').textContent=critical;
-    if(total>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${total} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
+    for(const r of droneData){addMarker(r);}
+    updateDamageCounts();
+    if(droneData.length>0){document.getElementById('drone-icon').textContent='✈';document.getElementById('drone-status-text').textContent=`Scanning (${droneData.length} found)`;document.getElementById('drone-status-text').style.color='var(--yellow)';}
     document.getElementById('drone-log').innerHTML=droneData.slice(0,15).map(r=>{
         const t=r.created_at?new Date(r.created_at).toLocaleTimeString():'—';
         const rid=r.event_id||r.id;
@@ -413,10 +418,7 @@ async function fixDamage(id){
     await fetch(`${SB_URL}/rest/v1/drone_reports?id=eq.${id}`,{method:'DELETE',headers:SB_H});
     if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
     droneData=droneData.filter(r=>(r.event_id||r.id)!=id);
-    let total=0,critical=0;
-    for(const r of droneData){total++;if(r.severity==='critical')critical++;}
-    document.getElementById('damage-count').textContent=total;
-    document.getElementById('critical-count').textContent=critical;
+    updateDamageCounts();
     map.closePopup();
     fetchDrone();
 }
@@ -445,6 +447,7 @@ async function fetchCracks() {
     Object.keys(crackMarkers).forEach(k => delete crackMarkers[k]);
 
     for(const r of crackData) { if(r.lat && r.lon) addCrackMarker(r); }
+    updateDamageCounts();
 
     document.getElementById('crack-log').innerHTML = crackData.slice(0,10).map(r => {
         const t = r.created_at ? new Date(r.created_at).toLocaleTimeString() : '—';
