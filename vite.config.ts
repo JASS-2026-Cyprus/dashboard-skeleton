@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/proxy/blackboard': {
+        target: 'https://blackboard.jass.school',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/blackboard/, ''),
+      },
       '/api/vlm': {
         target: 'https://hub.nhr.fau.de/api/llmgw/v1',
         changeOrigin: true,
@@ -13,6 +18,11 @@ export default defineConfig({
         headers: {
           Authorization: `Bearer ${process.env.VITE_VLM_API_KEY || ''}`,
         },
+      },
+      '/api/drone': {
+        target: process.env.VITE_DRONE_API_URL || 'http://192.168.1.109:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/drone/, ''),
       },
     },
   },

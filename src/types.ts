@@ -17,12 +17,6 @@ export interface TeamWidgetProps {
   size?: 'wide' | 'tall' | 'large';
 }
 
-export interface SystemSummaryProps {
-  action: string;
-  urgency: string;
-  state: string;
-}
-
 export interface LineGraphProps {
   data: number[];
   label: string;

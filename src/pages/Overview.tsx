@@ -9,8 +9,7 @@ import { useAgentAlerts } from '../hooks/useAgentAlerts';
 import { useMaintenanceReports } from '../hooks/useMaintenanceReports';
 import { fetchEqEvents, type EqEvent } from '../lib/supabase';
 import MaintenanceOverviewContent from './maintenance/MaintenanceOverviewContent';
-
-const pm25Data = [9.2, 8.8, 8.1, 7.9, 8.3, 9.5, 13.4, 18.2, 21.3, 19.7, 17.4, 15.1, 14.8, 15.3, 16.7, 22.4, 24.1, 21.8, 18.9, 16.4, 14.2, 12.8, 11.5, 10.3];
+import { useAirQualityData } from '../hooks/useAirQualityData';
 
 function WaterOverviewContent({ selectedPool, onPoolChange }: {
   selectedPool: Pool;
@@ -167,6 +166,7 @@ export default function Overview() {
   const { latestDelta, latestSea } = useWaterData(selectedPool);
   const { alertFeed } = useAgentAlerts();
   const { reports } = useMaintenanceReports();
+  const { latest: aqLatest, history: aqHistory } = useAirQualityData();
   const [eqEvents, setEqEvents] = useState<EqEvent[]>([]);
 
   useEffect(() => {
@@ -190,11 +190,7 @@ export default function Overview() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <SystemSummary
-        action="Monitor pool clarity delta. Water agent is active."
-        urgency="Routine monitoring. No immediate service disruptions forecasted."
-        state="4 teams active. All sensors operational."
-      />
+      <SystemSummary />
       <div className="grid" style={{ flex: 1, minHeight: 0 }}>
         <TeamWidget
           title="Maintenance"
@@ -210,9 +206,9 @@ export default function Overview() {
           title="Air Quality"
           status="Good"
           statusColor="green"
-          description="5 pollutants monitored. PM2.5, NO₂, CO and more."
+          description="Temperature, humidity, pressure, gas resistance and altitude monitored."
           detailsLink="/air-quality"
-          graph={<LineGraph data={pm25Data} label="PM2.5 (24h)" currentValue="10.3 µg/m³" color="#378add" />}
+          graph={<LineGraph data={aqHistory.humidity} label="Humidity (24h)" currentValue={aqLatest ? `${aqLatest.humidity.toFixed(1)} %` : '—'} color="#378add" />}
           stats={[
             { label: 'Status', value: 'Good', success: true },
             { label: 'Active events', value: '2' },

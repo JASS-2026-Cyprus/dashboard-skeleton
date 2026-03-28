@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Report } from './firebase';
 import { updateReportStatus } from './firebase';
+import { goToLocation } from './droneApi';
 import RoomMap from './RoomMap';
 import DroneDispatch from './DroneDispatch';
 import styles from './maintenance.module.css';
@@ -32,6 +33,8 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
   const [statusFilter, setStatusFilter] = useState('');
   const [waypoint, setWaypoint] = useState<{ x: number; y: number } | null>(null);
   const [missionActive, setMissionActive] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
 
   const sorted = [...reports].sort((a, b) => {
     const pd = sevOrder(a.severity) - sevOrder(b.severity);
@@ -63,10 +66,22 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
   );
 
   const handleDispatch = useCallback(async () => {
-    if (!activeReportId) return;
-    await updateReportStatus(activeReportId, 'in_progress').catch(() => {});
-    setMissionActive(true);
-  }, [activeReportId]);
+    if (!activeReportId || !waypoint) return;
+    setDispatching(true);
+    setDispatchError(null);
+
+    try {
+      await goToLocation([waypoint.x, waypoint.y]);
+      // 200 = success, proceed with mission
+      await updateReportStatus(activeReportId, 'in_progress').catch(() => {});
+      setMissionActive(true);
+    } catch (e) {
+      // Non-200: cancelled by operator, drone already airborne, or server error
+      setDispatchError(e instanceof Error ? e.message : 'Failed to reach drone API');
+    } finally {
+      setDispatching(false);
+    }
+  }, [activeReportId, waypoint]);
 
   const handleFootageReady = useCallback(
     (file: File) => {
@@ -181,16 +196,25 @@ export default function ReportsTab({ reports, onStartAnalysis }: Props) {
             />
 
             {!missionActive && (
-              <button
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                disabled={!waypoint}
-                onClick={handleDispatch}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              >
-                {waypoint
-                  ? `🚁 Fly to (${waypoint.x.toFixed(1)}, ${waypoint.y.toFixed(1)})`
-                  : '🚁 Select a point on the map to dispatch'}
-              </button>
+              <>
+                <button
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  disabled={!waypoint || dispatching}
+                  onClick={handleDispatch}
+                  style={{ width: '100%', marginTop: '0.5rem' }}
+                >
+                  {dispatching
+                    ? '🚁 Sending mission…'
+                    : waypoint
+                      ? `🚁 Fly to (${waypoint.x.toFixed(1)}, ${waypoint.y.toFixed(1)})`
+                      : '🚁 Select a point on the map to dispatch'}
+                </button>
+                {dispatchError && (
+                  <div style={{ marginTop: '0.5rem', fontSize: 13, color: '#c53030' }}>
+                    {dispatchError}
+                  </div>
+                )}
+              </>
             )}
 
             {missionActive && <DroneDispatch onFootageReady={handleFootageReady} />}

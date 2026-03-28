@@ -1,0 +1,11 @@
+.wrapper {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: #fafafa;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+}

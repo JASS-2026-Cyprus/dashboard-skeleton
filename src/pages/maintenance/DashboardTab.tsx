@@ -26,6 +26,13 @@ ChartJS.register(
   Legend,
   Filler
 );
+const PRESETS = [
+  { label: 'Today', days: 1 },
+  { label: '7 d', days: 7 },
+  { label: '30 d', days: 30 },
+  { label: '90 d', days: 90 },
+  { label: 'All', days: 0 },
+] as const;
 
 const CAT_COLORS: Record<string, string> = {
   trash: '#f97316', waste: '#f97316', fire: '#ef4444', smoke: '#ef4444',
@@ -48,13 +55,25 @@ interface Props {
 }
 
 export default function DashboardTab({ reports }: Props) {
-  const [timeRange, setTimeRange] = useState('all');
+  const [activeDays, setActiveDays] = useState(0); // 0 = all
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
 
   const filtered = useMemo(() => {
-    if (timeRange === 'all') return reports;
-    const cutoff = Date.now() - parseInt(timeRange) * 86400000;
+    if (showCustom && (customFrom || customTo)) {
+      const from = customFrom ? new Date(customFrom).getTime() : 0;
+      const to = customTo ? new Date(customTo).getTime() + 86399999 : Infinity;
+      return reports.filter((r) => {
+        if (!r.createdAt) return false;
+        const t = new Date(r.createdAt).getTime();
+        return t >= from && t <= to;
+      });
+    }
+    if (activeDays === 0) return reports;
+    const cutoff = Date.now() - activeDays * 86400000;
     return reports.filter((r) => r.createdAt && new Date(r.createdAt).getTime() >= cutoff);
-  }, [reports, timeRange]);
+  }, [reports, activeDays, customFrom, customTo, showCustom]);
 
   const rTotal = filtered.length;
   const rPending = filtered.filter((r) => r.status === 'pending').length;
@@ -130,13 +149,41 @@ export default function DashboardTab({ reports }: Props) {
   return (
     <div style={{ paddingRight: '2rem' }}>
       {/* Time filter */}
-      <div style={{ marginBottom: '1rem' }}>
-        <select className={styles.filterSelect} value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-          <option value="all">All time</option>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div className={styles.pillGroup}>
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              className={`${styles.pill} ${!showCustom && activeDays === p.days ? styles.pillActive : ''}`}
+              onClick={() => { setActiveDays(p.days); setShowCustom(false); }}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button
+            className={`${styles.pill} ${showCustom ? styles.pillActive : ''}`}
+            onClick={() => setShowCustom((v) => !v)}
+          >
+            Custom
+          </button>
+        </div>
+        {showCustom && (
+          <div className={styles.customRange}>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+            />
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>to</span>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Total incidents, Report status & severity and category distribution row */}

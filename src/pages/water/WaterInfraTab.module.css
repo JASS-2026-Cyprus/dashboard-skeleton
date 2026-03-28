@@ -1,0 +1,247 @@
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0 0 2rem;
+}
+
+.refreshBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.refreshBtn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.refreshBtn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.errorBanner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+  color: #c0392b;
+}
+
+.chartCard {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem 1.25rem;
+}
+
+.chartTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.chartSubtitle {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.bottomRow {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .bottomRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.eventsCard {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  min-height: 200px;
+}
+
+.eventsTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.eventsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eventItem {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: 0.6rem 0.75rem;
+}
+
+.eventHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 4px;
+}
+
+.eventTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventComponent {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.eventDetails {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.eventDetailsExpanded {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  white-space: pre-wrap;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--color-blue-text, #185fa5);
+  cursor: pointer;
+  display: block;
+}
+
+.resolvedToggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.75rem;
+  padding: 0.5rem 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.resolvedToggle:hover {
+  color: var(--color-text-primary);
+}
+
+.resolvedList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.resolvedItem {
+  background: #f9f9f9;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 0.65rem;
+  opacity: 0.85;
+}
+
+.resolvedAt {
+  color: var(--color-green-text, #3b6d11);
+  font-size: 10px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badgeLow    { background: #fef3c7; color: #92400e; }
+.badgeMedium { background: #ffedd5; color: #9a3412; }
+.badgeHigh   { background: #fee2e2; color: #991b1b; }
+.badgeUnknown { background: #f3f4f6; color: #6b7280; }
+
+.emptyMsg {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.mapCard {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.mapTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

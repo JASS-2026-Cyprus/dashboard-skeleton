@@ -14,6 +14,7 @@ import {
 export interface DroneStreamStatus {
   status: 'streaming' | 'no_stream';
   rtsp_url: string | null;
+  whep_url: string | null;
   updated_at?: string;
 }
 
@@ -68,11 +69,21 @@ export async function updateReportStatus(
 }
 
 export async function getDroneStream(): Promise<DroneStreamStatus> {
+  // Check WebRTC first (drone_webrtc/current), fall back to RTSP (drone_status/current)
+  const webrtcSnap = await getDoc(doc(db, 'drone_webrtc', 'current'));
+  if (webrtcSnap.exists()) {
+    const wd = webrtcSnap.data() as DocumentData;
+    const whep_url: string | null = wd.whep_url && typeof wd.whep_url === 'string' ? wd.whep_url : null;
+    if (wd.status === 'streaming' && whep_url) {
+      return { status: 'streaming', whep_url, rtsp_url: null, updated_at: wd.updated_at };
+    }
+  }
+
   const snap = await getDoc(doc(db, 'drone_status', 'current'));
-  if (!snap.exists()) return { status: 'no_stream', rtsp_url: null };
+  if (!snap.exists()) return { status: 'no_stream', rtsp_url: null, whep_url: null };
   const data = snap.data() as DocumentData;
   const rtsp_url: string | null = data.rtsp_url && typeof data.rtsp_url === 'string' && data.rtsp_url.startsWith('rtsp://') ? data.rtsp_url : null;
-  return { status: rtsp_url ? 'streaming' : 'no_stream', rtsp_url, updated_at: data.updated_at };
+  return { status: rtsp_url ? 'streaming' : 'no_stream', rtsp_url, whep_url: null, updated_at: data.updated_at };
 }
 
 export function subscribeDroneStream(callback: (status: DroneStreamStatus) => void) {
@@ -84,7 +95,7 @@ export function subscribeDroneStream(callback: (status: DroneStreamStatus) => vo
       const result = await getDroneStream();
       if (!cancelled) callback(result);
     } catch {
-      if (!cancelled) callback({ status: 'no_stream', rtsp_url: null });
+      if (!cancelled) callback({ status: 'no_stream', rtsp_url: null, whep_url: null });
     }
   };
 
