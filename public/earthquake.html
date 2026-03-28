@@ -429,12 +429,19 @@ async function fetchCracks() {
     // Don't redraw markers if a popup is open — user is interacting
     if(map._popup && map._popup.isOpen()) return;
 
-    const rows = await sbGet('crack_reports');
-    if(!rows.length) { document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>'; return; }
+    const rows = await sbGet('crack_reports','&limit=50');
+    // Only show cracks that actually have a crack
+    const withCrack = rows.filter(r => r.has_crack === true);
+    if(!withCrack.length) {
+        crackData = [];
+        updateDamageCounts();
+        document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>';
+        return;
+    }
 
     // Group by coordinate (round to 4 decimals) — keep only latest per location
     const byCoord = {};
-    for(const r of rows) {
+    for(const r of withCrack) {
         const key = (r.lat?.toFixed(4)||'0')+'_'+(r.lon?.toFixed(4)||'0');
         if(!byCoord[key] || new Date(r.created_at) > new Date(byCoord[key].created_at)) {
             byCoord[key] = r;
@@ -517,7 +524,7 @@ async function launchDrone(){
     setTimeout(()=>{btn.textContent='LAUNCH DRONE';btn.style.background='#e53935';btn.style.opacity='1';btn.disabled=false;},5000);
 }
 
-async function pollFast(){await fetchLive();updateStatus();}
+async function pollFast(){await fetchLive();updateDamageCounts();updateStatus();}
 async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone(),fetchCracks()]);}
 
 pollFast();pollSlow();
