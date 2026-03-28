@@ -3,16 +3,16 @@
   border: 0.5px solid var(--color-border);
   border-radius: var(--border-radius);
   padding: 1.25rem;
-  height: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .extra {
   flex: 1;
   margin-top: 1rem;
   min-height: 0;
-  overflow-y: auto;
 }
 
 .header {

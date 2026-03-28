@@ -18,19 +18,8 @@ export const POOLS = [
 
 export type Pool = (typeof POOLS)[number];
 
-// Only pools actively monitored by the swarm water agent have sensor IDs.
-// Pools not listed here show data from Supabase but receive no agent alerts.
-export const POOL_TO_SENSOR_ID: Partial<Record<Pool, string>> = {
-  'Olympic Pool': 'pool_a',
-  'Main Pool':    'pool_b',
-  'Spa Pool':     'pool_c',
-};
-
-export const SENSOR_ID_TO_NAME: Record<string, string> = {
-  pool_a: 'Olympic Pool',
-  pool_b: 'Main Pool',
-  pool_c: 'Spa Pool',
-};
+// sensor_id in agent events equals the pool name directly (e.g. "Main Pool").
+// All 14 pools are monitored by the water agent.
 
 export interface AlertEntry {
   action: 'post_alert' | 'send_maintenance' | 'close_facility';

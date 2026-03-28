@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-import { POOLS, POOL_TO_SENSOR_ID, SENSOR_ID_TO_NAME } from '../lib/waterConfig';
+import { POOLS } from '../lib/waterConfig';
 import type { Pool, AlertEntry } from '../lib/waterConfig';
 import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
@@ -132,20 +132,7 @@ function DeltaChart({ deltaData }: { deltaData: Reading[] }) {
 }
 
 function RiskBanner({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
-  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const top = sensorId ? entries.find((e) => e.sensor_id === sensorId) : undefined;
-
-  if (!sensorId) {
-    return (
-      <div className={`${styles.banner} ${styles.bannerClear}`}>
-        <span>ℹ️</span>
-        <div>
-          <strong>NOT MONITORED</strong>
-          <span className={styles.bannerDetail}>{selectedPool} has no swarm agent sensor — data shown from Supabase only</span>
-        </div>
-      </div>
-    );
-  }
+  const top = entries.find((e) => e.sensor_id === selectedPool);
 
   if (!top) {
     return (
@@ -179,9 +166,8 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedPool: Pool }) {
-  const sensorId = POOL_TO_SENSOR_ID[selectedPool];
-  const poolEntries = sensorId ? entries.filter((e) => e.sensor_id === sensorId) : [];
-  const otherEntries = sensorId ? entries.filter((e) => e.sensor_id !== sensorId) : entries;
+  const poolEntries = entries.filter((e) => e.sensor_id === selectedPool);
+  const otherEntries = entries.filter((e) => e.sensor_id !== selectedPool);
   const display = [...poolEntries, ...otherEntries].slice(0, 15);
 
   if (!display.length) {
@@ -200,7 +186,7 @@ function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedP
           ? styles.badgeInit
           : styles.badgeWarning;
         const badgeText = isCritical ? 'critical' : (ACTION_LABEL[e.action] ?? e.action);
-        const isOtherPool = !sensorId || e.sensor_id !== sensorId;
+        const isOtherPool = e.sensor_id !== selectedPool;
         return (
           <div key={i} className={styles.feedEntry}>
             <span className={`${styles.badge} ${badgeClass}`}>{badgeText}</span>
@@ -210,7 +196,7 @@ function AgentFeed({ entries, selectedPool }: { entries: AlertEntry[]; selectedP
               )}
               {e.message}
               {isOtherPool && (
-                <span className={styles.feedPool}> [{SENSOR_ID_TO_NAME[e.sensor_id] ?? e.sensor_id}]</span>
+                <span className={styles.feedPool}> [{e.sensor_id}]</span>
               )}
             </span>
           </div>
@@ -300,9 +286,6 @@ export default function WaterPage() {
             </span>
             <div className={styles.statusDots}>
               <span className={styles.dot} style={{ background: wsConnected ? '#22c55e' : '#aaa' }} />
-              <span style={{ color: wsConnected ? 'var(--color-green-text)' : '#aaa', fontSize: 11 }}>
-                agent {wsConnected ? 'connected' : 'offline'}
-              </span>
             </div>
             <button className={styles.refreshBtn} onClick={refresh}>↻ Refresh</button>
           </div>

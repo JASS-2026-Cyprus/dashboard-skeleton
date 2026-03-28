@@ -68,6 +68,19 @@
 
   .leaflet-popup-content-wrapper { border-radius:8px!important; }
   .leaflet-popup-content { font-family:inherit!important; font-size:12px!important; }
+
+  /* Photo modal */
+  .photo-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center; }
+  .photo-modal { background:#fff;border-radius:12px;padding:20px;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;gap:10px; }
+  .photo-modal h3 { font-size:14px;color:#333;margin:0;text-align:center; }
+  .photo-pair { display:flex;gap:12px;overflow:auto; }
+  .photo-pair div { flex:1;text-align:center; }
+  .photo-pair img { max-width:100%;max-height:60vh;border-radius:8px;border:1px solid #e0e0e0; }
+  .photo-pair .label { font-size:11px;color:#999;margin-bottom:4px;font-weight:600;text-transform:uppercase; }
+  .photo-close { position:absolute;top:15px;right:20px;font-size:28px;color:#fff;cursor:pointer;z-index:10001; }
+
+  /* Worsened triangle marker */
+  .worsened-icon { background:none!important;border:none!important; }
 </style>
 </head>
 <body>
@@ -120,6 +133,21 @@
     </div>
     <h2 style="margin-top:14px;">Damage Reports</h2>
     <div id="drone-log"></div>
+
+    <h2 style="margin-top:14px;">Crack Analysis (VLM)</h2>
+    <div id="crack-log"></div>
+  </div>
+</div>
+
+<!-- Photo comparison modal -->
+<div id="photo-modal" class="photo-overlay" style="display:none" onclick="if(event.target===this)closePhotos()">
+  <span class="photo-close" onclick="closePhotos()">&times;</span>
+  <div class="photo-modal">
+    <h3 id="photo-title">Crack Comparison</h3>
+    <div class="photo-pair">
+      <div><div class="label">Before</div><img id="photo-before" src=""></div>
+      <div><div class="label">After</div><img id="photo-after" src=""></div>
+    </div>
   </div>
 </div>
 
@@ -141,6 +169,7 @@ L.control.zoom({position:'topright'}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'CartoDB',maxZoom:19}).addTo(map);
 
 const markers = {};
+const crackMarkers = {};
 const COLORS = {critical:'#e53935',high:'#d18616',moderate:'#f5a623',low:'#639922'};
 const RADIUS = {critical:60,high:45,moderate:30,low:20};
 
@@ -150,6 +179,92 @@ function addMarker(r) {
     const m = L.circle([r.lat,r.lon],{radius:RADIUS[r.severity]||25,color:c,fillColor:c,fillOpacity:0.3,weight:2}).addTo(map);
     m.bindPopup(`<b style="color:${c}">${(r.severity||'').toUpperCase()}</b><br>${r.damage_type||'Damage'}<br>${r.building||''}<br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span><br><button onclick="fixDamage('${id}')" style="margin-top:8px;padding:6px 14px;font-size:11px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:6px;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(0,0,0,0.15);letter-spacing:0.5px">✓ MARK AS FIXED</button>`);
     markers[id]=m;
+}
+
+function makeTriangleIcon(color) {
+    return L.divIcon({
+        className:'worsened-icon',
+        html:`<div style="cursor:pointer"><svg width="36" height="36" viewBox="0 0 36 36"><polygon points="18,2 34,32 2,32" fill="${color}" stroke="#fff" stroke-width="2"/><text x="18" y="27" text-anchor="middle" font-size="18" font-weight="bold" fill="#fff">!</text></svg></div>`,
+        iconSize:[36,36], iconAnchor:[18,32], popupAnchor:[0,-32]
+    });
+}
+
+function addCrackMarker(r) {
+    const id = 'crack_'+r.id;
+    const c = COLORS[r.severity]||'#999';
+    const isWorsened = r.status === 'worsened' && !r.ui_checked;
+    const photoBtn = r.status === 'worsened' && r.image_url ? `<button onclick="event.stopPropagation();showPhotos('${r.image_before_url||''}','${r.image_url}','${(r.image_name||'').replace(/'/g,'')}')" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:600;background:#378add;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">📷 View Photos</button>` : '';
+    const ackBtn = isWorsened ? `<button onclick="event.stopPropagation();acknowledgeCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#f5a623;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%">👁 ACKNOWLEDGE</button>` : '';
+    const fixBtn = `<button onclick="event.stopPropagation();fixCrack('${id}',${r.id})" style="margin-top:4px;padding:5px 12px;font-size:11px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:6px;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(0,0,0,0.15)">✓ MARK AS FIXED</button>`;
+    const popupHtml = `<b style="color:${c}">${(r.severity||'').toUpperCase()}</b>${isWorsened?' <span style="color:#e53935;font-weight:700">⚠ WORSENED</span>':''}<br>${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm × ${r.max_crack_width_mm||0}mm<br><span style="color:#999;font-size:11px">${r.image_name||''}</span><br><span style="color:#999">${r.lat?.toFixed(5)}, ${r.lon?.toFixed(5)}</span>${photoBtn}${ackBtn}${fixBtn}`;
+
+    // Remove old marker if exists
+    if(crackMarkers[id]) { map.removeLayer(crackMarkers[id]); delete crackMarkers[id]; }
+
+    let m;
+    if(isWorsened) {
+        m = L.marker([r.lat, r.lon], {icon: makeTriangleIcon(c), interactive:true}).addTo(map);
+    } else {
+        m = L.circle([r.lat, r.lon], {radius:20, color:c, fillColor:c, fillOpacity:0.5, weight:2}).addTo(map);
+    }
+    m.bindPopup(popupHtml);
+    crackMarkers[id] = m;
+}
+
+async function acknowledgeCrack(id, dbId) {
+    // Set ui_checked=true on ALL reports at this coordinate
+    const cr = crackData.find(c => 'crack_'+c.id === id);
+    const lat = cr ? cr.lat : null;
+    const lon = cr ? cr.lon : null;
+    // Call Supabase RPC to set ui_checked=true on all reports at this coordinate
+    await fetch(`${SB_URL}/rest/v1/rpc/acknowledge_cracks`, {
+        method:'POST', headers:{...SB_H, 'Content-Type':'application/json'},
+        body:JSON.stringify({p_lat:lat, p_lon:lon})
+    });
+    // Update local data immediately
+    crackData.forEach(c => { if(c.lat===lat && c.lon===lon) c.ui_checked=true; });
+    // Remove triangle, redraw everything
+    map.closePopup();
+    for(const k in crackMarkers) { map.removeLayer(crackMarkers[k]); delete crackMarkers[k]; }
+    for(const c of crackData) { if(c.lat && c.lon) addCrackMarker(c); }
+    // Re-render log
+    fetchCracks();
+}
+
+function showPhotos(beforeUrl, afterUrl, title) {
+    const modal = document.getElementById('photo-modal');
+    document.getElementById('photo-title').textContent = title || 'Crack Comparison';
+    const beforeImg = document.getElementById('photo-before');
+    const afterImg = document.getElementById('photo-after');
+    if(beforeUrl && beforeUrl !== 'null' && beforeUrl !== 'undefined') {
+        beforeImg.src = beforeUrl; beforeImg.parentElement.style.display = '';
+    } else {
+        beforeImg.src = ''; beforeImg.parentElement.style.display = 'none';
+    }
+    afterImg.src = afterUrl;
+    modal.style.display = 'flex';
+}
+
+function closePhotos() {
+    document.getElementById('photo-modal').style.display = 'none';
+}
+
+async function fixCrack(markerId, dbId) {
+    const cr = crackData.find(c => 'crack_'+c.id === markerId);
+    const lat = cr ? cr.lat : null;
+    const lon = cr ? cr.lon : null;
+    if(lat !== null && lon !== null) {
+        await fetch(`${SB_URL}/rest/v1/rpc/delete_cracks_at`, {
+            method:'POST', headers:{...SB_H, 'Content-Type':'application/json'},
+            body:JSON.stringify({p_lat:lat, p_lon:lon})
+        });
+    }
+    if(crackMarkers[markerId]) { map.removeLayer(crackMarkers[markerId]); delete crackMarkers[markerId]; }
+    crackData = crackData.filter(c => !(c.lat===lat && c.lon===lon));
+    map.closePopup();
+    // Update log
+    document.getElementById('crack-log').innerHTML = crackData.length ? '' : '<div style="color:#999;font-size:12px">No crack reports</div>';
+    if(crackData.length) fetchCracks();
 }
 
 // Charts
@@ -276,9 +391,51 @@ async function fixDamage(id){
     fetchDrone();
 }
 
+let crackData = [];
+
+async function fetchCracks() {
+    // Don't redraw markers if a popup is open — user is interacting
+    if(map._popup && map._popup.isOpen()) return;
+
+    const rows = await sbGet('crack_reports');
+    if(!rows.length) { document.getElementById('crack-log').innerHTML='<div style="color:#999;font-size:12px">No crack reports</div>'; return; }
+
+    // Group by coordinate (round to 4 decimals) — keep only latest per location
+    const byCoord = {};
+    for(const r of rows) {
+        const key = (r.lat?.toFixed(4)||'0')+'_'+(r.lon?.toFixed(4)||'0');
+        if(!byCoord[key] || new Date(r.created_at) > new Date(byCoord[key].created_at)) {
+            byCoord[key] = r;
+        }
+    }
+    crackData = Object.values(byCoord);
+
+    // Clear old crack markers
+    for(const id in crackMarkers) { map.removeLayer(crackMarkers[id]); }
+    Object.keys(crackMarkers).forEach(k => delete crackMarkers[k]);
+
+    for(const r of crackData) { if(r.lat && r.lon) addCrackMarker(r); }
+
+    document.getElementById('crack-log').innerHTML = crackData.slice(0,10).map(r => {
+        const t = r.created_at ? new Date(r.created_at).toLocaleTimeString() : '—';
+        const sev = r.severity || 'low';
+        const id = 'crack_'+r.id;
+        const isW = r.status === 'worsened' && !r.ui_checked;
+        return `<div class="event" style="cursor:pointer${isW?';border-left:3px solid #e53935':''}" onclick="flyToCrack(${r.lat},${r.lon},'${id}')">
+            <span class="badge ${sev}">${sev}</span>${isW?' <span style="color:#e53935;font-size:10px;font-weight:700">⚠ WORSENED</span>':''}
+            ${r.crack_count||0} crack(s) — ${r.max_crack_length_mm||0}mm
+            <span style="color:var(--text2)">${r.image_name||''}</span>
+            <div class="time">${r.lat?.toFixed(4)}, ${r.lon?.toFixed(4)} — ${t}</div>
+            <button onclick="event.stopPropagation();fixCrack('${id}',${r.id})" style="margin-top:4px;padding:4px 12px;font-size:10px;font-weight:700;background:#20c997;color:#fff;border:2px solid #20c997;border-radius:5px;cursor:pointer;display:block;width:100%">✓ FIXED</button>
+        </div>`;
+    }).join('');
+}
+
+function flyToCrack(lat,lon,id){map.flyTo([lat,lon],18,{duration:0.8});if(crackMarkers[id])crackMarkers[id].openPopup();}
+
 function updateStatus(){
     const now=new Date().toLocaleTimeString();
-    document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} reports | ${now}`;
+    document.getElementById('status-text').textContent=`Sensor: ${sensorConnected?'CONNECTED':'WAITING'} | Drone: ${droneData.length} | Cracks: ${crackData.length} | ${now}`;
 }
 
 async function launchDrone(){
@@ -297,7 +454,7 @@ async function launchDrone(){
 }
 
 async function pollFast(){await fetchLive();updateStatus();}
-async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone()]);}
+async function pollSlow(){await Promise.all([fetchHistory(),fetchDrone(),fetchCracks()]);}
 
 pollFast();pollSlow();
 setInterval(()=>pollFast().catch(()=>{}),700);

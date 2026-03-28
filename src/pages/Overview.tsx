@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import SystemSummary from '../components/SystemSummary';
 import TeamWidget from '../components/TeamWidget';
 import LineGraph from '../components/LineGraph';
-import { POOLS, POOL_TO_SENSOR_ID } from '../lib/waterConfig';
+import { POOLS } from '../lib/waterConfig';
 import type { Pool } from '../lib/waterConfig';
 import { useWaterData } from '../hooks/useWaterData';
 import { useAgentAlerts } from '../hooks/useAgentAlerts';
@@ -32,7 +32,7 @@ function WaterOverviewContent({ selectedPool, onPoolChange }: {
           background: 'white',
           color: '#1a1a1a',
           cursor: 'pointer',
-          marginBottom: 8,
+          marginBottom: 4,
           width: '100%',
         }}
       >
@@ -76,6 +76,8 @@ function EarthquakeWidget({ events }: { events: EqEvent[] }) {
       border: '0.5px solid #e0e0e0',
       borderRadius: 12,
       padding: '1.25rem',
+      overflowY: 'auto',
+      alignSelf: 'stretch',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -176,7 +178,7 @@ export default function Overview() {
     return () => clearInterval(id);
   }, []);
 
-  const sensorId = POOL_TO_SENSOR_ID[selectedPool] ?? null;
+  const sensorId = selectedPool;
   const topAlert = sensorId ? alertFeed.find((e) => e.sensor_id === sensorId) : undefined;
 
   let waterStatus = 'Normal';
