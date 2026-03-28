@@ -118,23 +118,22 @@ export default function AirQualityPage() {
   const { latest, history, events, alertStatus, loading, error, lastUpdated } = useAirQualityData();
   const [eventsTab, setEventsTab] = useState<'active' | 'upcoming' | 'past'>('active');
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
   const categorisedEvents = useMemo(() => {
     const active: typeof events = [];
     const upcoming: typeof events = [];
     const past: typeof events = [];
     for (const ev of events) {
-      const start = ev.start_date ? new Date(ev.start_date) : null;
-      const end = ev.end_date ? new Date(ev.end_date) : start;
+      const start = ev.start_date || null;
+      const end = ev.end_date || ev.start_date || null;
       if (!start) { upcoming.push(ev); continue; }
-      if (end && end < today) past.push(ev);
-      else if (start <= today) active.push(ev);
+      if (end && end < todayStr) past.push(ev);
+      else if (start <= todayStr) active.push(ev);
       else upcoming.push(ev);
     }
     return { active, upcoming, past };
-  }, [events, today]);
+  }, [events, todayStr]);
 
   const pollutants = latest ? [
     { label: 'Temperature',    value: latest.temperature,    unit: '°C',  limit: 40,    ...getTemperatureStatus(latest.temperature) },

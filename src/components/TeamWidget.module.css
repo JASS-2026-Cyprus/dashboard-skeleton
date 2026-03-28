@@ -5,13 +5,13 @@
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .extra {
   flex: 1;
   margin-top: 1rem;
   min-height: 0;
-  overflow-y: auto;
 }
 
 .header {
