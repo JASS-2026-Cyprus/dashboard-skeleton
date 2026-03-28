@@ -168,6 +168,25 @@
   background: var(--color-blue);
 }
 
+.btnSuccess {
+  background: var(--color-green);
+  color: white;
+  border-color: var(--color-green);
+}
+
+.btnSuccess:hover {
+  background: var(--color-green-text);
+}
+
+.btnSuccess:disabled {
+  background: var(--color-green);
+}
+
+.btnResolve {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
 /* ── Job card ── */
 .jobCard {
   background: var(--color-bg-primary);
