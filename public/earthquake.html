@@ -438,8 +438,8 @@ async function fetchCracks() {
     if(map._popup && map._popup.isOpen()) return;
 
     const rows = await sbGet('crack_reports','&limit=50');
-    // Show: new OR worsened (regardless of has_crack)
-    const visible = rows.filter(r => r.status==='new' || r.status==='worsened');
+    // Show: (new + has_damage) OR (worsened)
+    const visible = rows.filter(r => (r.status==='new' && r.has_damage===true) || r.status==='worsened');
     if(!visible.length) {
         crackData = [];
         updateDamageCounts();
